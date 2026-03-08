@@ -26,7 +26,9 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# --- Middleware ---
+# --- Middleware (added in reverse execution order: last added = outermost = runs first) ---
+# AuthMiddleware must be added first so SessionMiddleware wraps it and runs first
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret_key,
@@ -34,7 +36,6 @@ app.add_middleware(
     https_only=settings.environment == "production",
     same_site="lax",
 )
-app.add_middleware(AuthMiddleware)
 
 # --- Static files ---
 app.mount("/static", StaticFiles(directory="static"), name="static")
