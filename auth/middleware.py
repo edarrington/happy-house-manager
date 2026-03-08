@@ -13,8 +13,10 @@ logger = logging.getLogger(__name__)
 # Paths that never require auth
 PUBLIC_PATHS = {
     "/auth/login",
+    "/auth/google",
     "/auth/callback",
     "/auth/logout",
+    "/auth/switch",
     "/health",
     "/api/docs",
     "/api/redoc",
