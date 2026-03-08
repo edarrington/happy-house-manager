@@ -1,41 +1,28 @@
-version: '3.9'
+version: "3.9"
 
 services:
-  backend:
+  app:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    container_name: happy-house-backend
     ports:
-      - '8000:8000'
-    env_file:
-      - .env
+      - "8000:8000"
     environment:
       - ENVIRONMENT=development
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=http://localhost:8000/auth/callback
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY:-dev-secret-change-me}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-change-me}
+      - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
+      - COSMOS_KEY=${COSMOS_KEY}
+      - COSMOS_DATABASE_NAME=${COSMOS_DATABASE_NAME:-happy-house-manager}
+      - KEY_VAULT_URL=${KEY_VAULT_URL}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - APP_BASE_URL=http://localhost:8000
     volumes:
-      - ./backend:/app
+      - .:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    networks:
-      - happy-house-net
-
-  frontend:
-    image: node:18-alpine
-    container_name: happy-house-frontend
-    working_dir: /app
-    ports:
-      - '3000:3000'
-    env_file:
-      - .env
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    command: sh -c 'npm install && npm run dev'
-    depends_on:
-      - backend
-    networks:
-      - happy-house-net
-
-networks:
-  happy-house-net:
-    driver: bridge
+    restart: unless-stopped
