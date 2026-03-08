@@ -1,32 +1,48 @@
-@description('Location for all resources')
-param location string = resourceGroup().location
+@description('Azure region for all resources')
+param location string = 'westus2'
 
-@description('Environment tag')
-param environment string = 'production'
+@description('Container image tag')
+param imageTag string = 'latest'
 
-@description('Google OAuth Client ID')
+@description('Google OAuth client ID (stored as Key Vault secret)')
 @secure()
 param googleClientId string
 
-@description('Google OAuth Client Secret')
+@description('Google OAuth client secret (stored as Key Vault secret)')
 @secure()
 param googleClientSecret string
 
-@description('JWT secret key')
+@description('JWT session secret')
 @secure()
-param jwtSecretKey string
+param sessionSecretKey string
 
-var appName = 'happy-house-manager'
-var kvName = 'kv-happy-house-manager'
-var cosmosName = 'cosmos-happy-house-manager'
-var acrName = 'crhappyhousemanager'
-var caeNameStr = 'cae-happy-house-manager'
-var caName = 'ca-happy-house-manager'
-var swaName = 'swa-happy-house-manager'
+// ---------------------------------------------------------------------------
+// Managed Identity
+// ---------------------------------------------------------------------------
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-hhm-prod'
+  location: location
+}
 
-// ── Key Vault ────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Log Analytics Workspace
+// ---------------------------------------------------------------------------
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: 'log-hhm-prod'
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Key Vault
+// ---------------------------------------------------------------------------
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: kvName
+  name: 'kv-hhm-prod'
   location: location
   properties: {
     sku: {
@@ -35,37 +51,53 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     }
     tenantId: subscription().tenantId
     enableRbacAuthorization: true
-    softDeleteRetentionInDays: 7
     enableSoftDelete: true
+    softDeleteRetentionInDays: 7
   }
-  tags: { environment: environment, app: appName }
 }
 
-resource kvGoogleClientId 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+// Grant managed identity read access to Key Vault secrets
+resource kvSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, managedIdentity.id, '4633458b-17de-408a-b874-0445c86b69e6')
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalId: managedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Store secrets in Key Vault
+resource secretGoogleClientId 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'google-client-id'
   properties: { value: googleClientId }
 }
 
-resource kvGoogleClientSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource secretGoogleClientSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'google-client-secret'
   properties: { value: googleClientSecret }
 }
 
-resource kvJwtSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource secretSessionKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'jwt-secret-key'
-  properties: { value: jwtSecretKey }
+  name: 'session-secret-key'
+  properties: { value: sessionSecretKey }
 }
 
-// ── Cosmos DB ────────────────────────────────────────────────────────────────
-resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-02-15-preview' = {
-  name: cosmosName
+// ---------------------------------------------------------------------------
+// Cosmos DB (serverless)
+// ---------------------------------------------------------------------------
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: 'cosmos-hhm-prod'
   location: location
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
     locations: [
       {
         locationName: location
@@ -73,25 +105,22 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-02-15-preview
         isZoneRedundant: false
       }
     ]
-    consistencyPolicy: {
-      defaultConsistencyLevel: 'Session'
-    }
-    enableFreeTier: true
+    capabilities: [
+      { name: 'EnableServerless' }
+    ]
   }
-  tags: { environment: environment, app: appName }
 }
 
-resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-02-15-preview' = {
+resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
   parent: cosmosAccount
-  name: 'happy-house'
+  name: 'happy-house-manager'
   properties: {
-    resource: { id: 'happy-house' }
-    options: { throughput: 400 }
+    resource: { id: 'happy-house-manager' }
   }
 }
 
-resource cosmosUsersContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-02-15-preview' = {
-  parent: cosmosDb
+resource cosmosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
   name: 'users'
   properties: {
     resource: {
@@ -100,32 +129,42 @@ resource cosmosUsersContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabase
         paths: ['/id']
         kind: 'Hash'
       }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+      }
     }
   }
 }
 
-// ── Container Registry ───────────────────────────────────────────────────────
-resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: acrName
+// ---------------------------------------------------------------------------
+// Container Registry
+// ---------------------------------------------------------------------------
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
+  name: 'acrhhmprod'
   location: location
   sku: { name: 'Basic' }
-  properties: { adminUserEnabled: true }
-  tags: { environment: environment, app: appName }
-}
-
-// ── Container Apps Environment ────────────────────────────────────────────────
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'log-${appName}'
-  location: location
   properties: {
-    sku: { name: 'PerGB2018' }
-    retentionInDays: 30
+    adminUserEnabled: false
   }
-  tags: { environment: environment, app: appName }
 }
 
-resource containerAppsEnv 'Microsoft.App/managedEnvironments@2023-11-02-preview' = {
-  name: caeNameStr
+// Grant managed identity ACR pull access
+resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerRegistry.id, managedIdentity.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalId: managedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Container Apps Environment
+// ---------------------------------------------------------------------------
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: 'cae-hhm-prod'
   location: location
   properties: {
     appLogsConfiguration: {
@@ -136,87 +175,118 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2023-11-02-preview'
       }
     }
   }
-  tags: { environment: environment, app: appName }
 }
 
-// ── Container App (Backend) ───────────────────────────────────────────────────
-resource containerApp 'Microsoft.App/containerApps@2023-11-02-preview' = {
-  name: caName
+// ---------------------------------------------------------------------------
+// Container App
+// ---------------------------------------------------------------------------
+resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: 'ca-hhm-prod'
   location: location
-  identity: { type: 'SystemAssigned' }
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentity.id}': {}
+    }
+  }
   properties: {
-    managedEnvironmentId: containerAppsEnv.id
+    managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
       ingress: {
         external: true
         targetPort: 8000
         transport: 'http'
-        corsPolicy: {
-          allowedOrigins: ['*']
-          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-          allowedHeaders: ['*']
-        }
       }
       registries: [
         {
-          server: acr.properties.loginServer
-          username: acr.listCredentials().username
-          passwordSecretRef: 'acr-password'
-        }
-      ]
-      secrets: [
-        {
-          name: 'acr-password'
-          value: acr.listCredentials().passwords[0].value
+          server: containerRegistry.properties.loginServer
+          identity: managedIdentity.id
         }
       ]
     }
     template: {
       containers: [
         {
-          name: 'backend'
-          image: '${acr.properties.loginServer}/happy-house-backend:latest'
+          name: 'happy-house-manager'
+          image: '${containerRegistry.properties.loginServer}/happy-house-manager:${imageTag}'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
           }
           env: [
-            { name: 'ENVIRONMENT', value: 'production' }
-            { name: 'KEY_VAULT_URL', value: keyVault.properties.vaultUri }
-            { name: 'COSMOS_ENDPOINT', value: cosmosAccount.properties.documentEndpoint }
-            { name: 'COSMOS_KEY', secretRef: 'cosmos-key' }
-            { name: 'CORS_ORIGINS', value: 'https://${swaName}.azurestaticapps.net' }
+            {
+              name: 'ENVIRONMENT'
+              value: 'production'
+            }
+            {
+              name: 'APP_BASE_URL'
+              value: 'https://ca-hhm-prod.${containerAppsEnvironment.properties.defaultDomain}'
+            }
+            {
+              name: 'GOOGLE_REDIRECT_URI'
+              value: 'https://ca-hhm-prod.${containerAppsEnvironment.properties.defaultDomain}/auth/callback'
+            }
+            {
+              name: 'KEY_VAULT_URL'
+              value: keyVault.properties.vaultUri
+            }
+            {
+              name: 'COSMOS_ENDPOINT'
+              value: cosmosAccount.properties.documentEndpoint
+            }
+            {
+              name: 'COSMOS_DATABASE_NAME'
+              value: 'happy-house-manager'
+            }
+            {
+              name: 'COSMOS_USERS_CONTAINER'
+              value: 'users'
+            }
+            {
+              name: 'GOOGLE_CLIENT_ID'
+              secretRef: 'google-client-id'
+            }
+            {
+              name: 'GOOGLE_CLIENT_SECRET'
+              secretRef: 'google-client-secret'
+            }
+            {
+              name: 'SESSION_SECRET_KEY'
+              secretRef: 'session-secret-key'
+            }
+            {
+              name: 'JWT_SECRET_KEY'
+              secretRef: 'session-secret-key'
+            }
+            {
+              name: 'AZURE_CLIENT_ID'
+              value: managedIdentity.properties.clientId
+            }
           ]
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: 1
         maxReplicas: 3
+        rules: [
+          {
+            name: 'http-scaling'
+            http: {
+              metadata: {
+                concurrentRequests: '20'
+              }
+            }
+          }
+        ]
       }
     }
   }
-  tags: { environment: environment, app: appName }
 }
 
-// ── Static Web App (Frontend) ─────────────────────────────────────────────────
-resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
-  name: swaName
-  location: 'eastus2'
-  sku: { name: 'Free', tier: 'Free' }
-  properties: {
-    repositoryUrl: 'https://github.com/edarrington/happy-house-manager'
-    branch: 'main'
-    buildProperties: {
-      appLocation: 'frontend'
-      outputLocation: 'out'
-    }
-  }
-  tags: { environment: environment, app: appName }
-}
-
-// ── Outputs ───────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Outputs
+// ---------------------------------------------------------------------------
+output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
+output containerRegistryServer string = containerRegistry.properties.loginServer
 output keyVaultUri string = keyVault.properties.vaultUri
 output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
-output acrLoginServer string = acr.properties.loginServer
-output containerAppFqdn string = containerApp.properties.configuration.ingress.fqdn
-output staticWebAppUrl string = staticWebApp.properties.defaultHostname

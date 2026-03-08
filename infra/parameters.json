@@ -3,15 +3,15 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "location": {
-      "value": "eastus"
+      "value": "westus2"
     },
-    "environment": {
-      "value": "production"
+    "imageTag": {
+      "value": "latest"
     },
     "googleClientId": {
       "reference": {
         "keyVault": {
-          "id": "/subscriptions/<your-subscription-id>/resourceGroups/rg-happy-house-manager/providers/Microsoft.KeyVault/vaults/kv-happy-house-manager"
+          "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/rg-hhm-prod/providers/Microsoft.KeyVault/vaults/kv-hhm-prod"
         },
         "secretName": "google-client-id"
       }
@@ -19,17 +19,17 @@
     "googleClientSecret": {
       "reference": {
         "keyVault": {
-          "id": "/subscriptions/<your-subscription-id>/resourceGroups/rg-happy-house-manager/providers/Microsoft.KeyVault/vaults/kv-happy-house-manager"
+          "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/rg-hhm-prod/providers/Microsoft.KeyVault/vaults/kv-hhm-prod"
         },
         "secretName": "google-client-secret"
       }
     },
-    "jwtSecretKey": {
+    "sessionSecretKey": {
       "reference": {
         "keyVault": {
-          "id": "/subscriptions/<your-subscription-id>/resourceGroups/rg-happy-house-manager/providers/Microsoft.KeyVault/vaults/kv-happy-house-manager"
+          "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/rg-hhm-prod/providers/Microsoft.KeyVault/vaults/kv-hhm-prod"
         },
-        "secretName": "jwt-secret-key"
+        "secretName": "session-secret-key"
       }
     }
   }

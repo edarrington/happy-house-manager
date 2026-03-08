@@ -1,74 +1,151 @@
-# CLAUDE.md — Happy House Manager Development Guidelines
+# Happy House Manager - Claude Context
 
-## Project Context
+## What This Is
 
-This is a private home management app for Erick and Jewel Darrington. It integrates Gmail, Google Drive, Google Calendar, and Todoist into a single dashboard.
+A private family web app for Erick and Jewel Arrington. Integrates Gmail, Google Drive, Google Calendar, and Todoist into a single unified interface.
 
-## Azure Resource Names
+## Architecture (v2 - Python Only)
+
+**Single FastAPI app** that serves both HTML pages and JSON API endpoints.
+
+```
+FastAPI (main.py)
+  ├── Jinja2 templates  ←─ full HTML pages
+  ├── HTMX partials     ←─ dynamic updates (no page reload)
+  ├── Tailwind CSS CDN  ←─ styling (no npm/build step)
+  └── /api/* routes     ←─ JSON for programmatic access
+```
+
+**No JavaScript framework. No Next.js. No React. No TypeScript. No npm.**
+
+## File Structure
+
+```
+happy-house-manager/
+├── main.py                    # FastAPI app entry point
+├── config.py                  # Pydantic settings
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── routers/
+│   ├── auth.py                # Google OAuth + session
+│   ├── gmail.py               # Gmail pages + HTMX partials
+│   ├── drive.py               # Drive pages + HTMX partials
+│   ├── calendar.py            # Calendar pages + HTMX partials
+│   └── todoist.py             # Tasks pages + HTMX partials
+├── services/
+│   ├── cosmos_client.py       # Azure Cosmos DB
+│   ├── google_client.py       # Google API service builders
+│   ├── keyvault_client.py     # Azure Key Vault
+│   └── todoist_client.py      # Todoist REST API v2
+├── auth/
+│   ├── google_oauth.py        # OAuth helpers
+│   └── middleware.py          # Cookie session + auth middleware
+├── templates/                 # Jinja2 HTML templates
+│   ├── base.html              # Sidebar layout + HTMX + Tailwind
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── gmail/
+│   ├── drive/
+│   ├── calendar/
+│   └── tasks/
+├── static/
+│   └── app.css
+├── infra/
+│   ├── main.bicep
+│   └── parameters.json
+└── .github/workflows/deploy.yml
+```
+
+## Infrastructure (Azure)
 
 | Resource | Name |
 |---|---|
-| Resource Group | `rg-happy-house-manager` |
-| Static Web App | `swa-happy-house-manager` |
-| Container App | `ca-happy-house-manager` |
-| Container Apps Environment | `cae-happy-house-manager` |
-| Container Registry | `crhappyhousemanager` |
-| Cosmos DB Account | `cosmos-happy-house-manager` |
-| Cosmos DB Database | `happy-house` |
-| Cosmos DB Container | `users` |
-| Key Vault | `kv-happy-house-manager` |
-| Location | `eastus` |
+| Resource Group | `rg-hhm-prod` |
+| Container App | `ca-hhm-prod` |
+| Container Apps Env | `cae-hhm-prod` |
+| Container Registry | `acrhhmprod` |
+| Key Vault | `kv-hhm-prod` |
+| Cosmos DB | `cosmos-hhm-prod` |
+| Log Analytics | `log-hhm-prod` |
+| Managed Identity | `id-hhm-prod` |
+| Location | `westus2` |
 
-## Environment Variable Reference
+**No Static Web App** — single Container App serves everything.
 
-See `.env.example` for all required variables. Key ones:
+## Auth Flow
 
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google OAuth app credentials
-- `JWT_SECRET_KEY` — Session JWT signing key
-- `COSMOS_ENDPOINT` / `COSMOS_KEY` — Cosmos DB connection
-- `KEY_VAULT_URL` — Azure Key Vault URL
-- `NEXT_PUBLIC_BACKEND_URL` — Backend URL for frontend
+1. GET `/auth/login` → show login page
+2. GET `/auth/google` → redirect to Google OAuth
+3. GET `/auth/callback` → exchange code → store tokens in Cosmos DB → set signed cookie
+4. Cookie (`hhm_session`) contains a JWT decoded by `AuthMiddleware`
+5. `request.state.user` available in all routes
+6. GET `/auth/switch` → Google account picker for second user
+7. GET `/auth/logout` → revoke token + clear cookie
 
-## Architecture Decisions
+## Multi-User (Erick + Jewel)
 
-### Multi-User Auth
-- Each user (Erick / Jewel) signs in with their own Google account
-- Google tokens (access + refresh) stored per-user in Cosmos DB under their `user_id` (Google sub)
-- A session JWT is issued after OAuth, identifying the user
-- Middleware extracts user identity from JWT and injects it as a FastAPI dependency
+- Each user has their own Cosmos DB document keyed by Google `sub`
+- Users stored with Google tokens, Todoist token, profile info
+- Switch user via `/auth/switch` which triggers `prompt=select_account consent`
+- Sidebar shows current user's name + avatar with "Switch User" button
 
-### Token Refresh
-- Google tokens are refreshed automatically in `google_client.py` before building service objects
-- Refreshed tokens are written back to Cosmos DB
+## HTMX Pattern
 
-### Todoist
-- Each user links their own Todoist token via `POST /users/link-todoist`
-- Token stored in user's Cosmos DB document
+- Full page: `GET /gmail` → renders `gmail/index.html` (extends `base.html`)
+- Partial: `hx-get="/gmail/message/{id}"` → renders `gmail/message.html` (standalone fragment)
+- Form: `hx-post="/gmail/send"` → renders `gmail/send_result.html`
+- Delete: `hx-delete="/calendar/event/{id}"` + `hx-swap="outerHTML"` removes the `<li>`
 
-### Secrets
-- In production, all secrets come from Azure Key Vault via managed identity
-- Locally, secrets are read from `.env`
+## Local Development
 
-## Code Style
+```bash
+# 1. Copy env file
+cp .env.example .env
+# Fill in GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, COSMOS_ENDPOINT, COSMOS_KEY
 
-### Backend (Python)
-- Use FastAPI dependency injection for current user and Google clients
-- All router functions wrapped in `try/except` with `HTTPException`
-- Pydantic models for request/response shapes
-- Async functions throughout
+# 2. Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
 
-### Frontend (TypeScript)
-- Strict TypeScript — no `any` unless unavoidable
-- React Query for all data fetching
-- Tailwind CSS for styling
-- App Router (Next.js 14)
+# 3. Run
+uvicorn main:app --reload --port 8000
 
-## Key User IDs (for Cosmos DB)
-
-Users are identified by their Google `sub` (subject) claim from the ID token. These are set at first login and stored as the document ID.
+# Or with Docker Compose
+docker-compose up --build
+```
 
 ## Deployment
 
-1. Push to `main` → triggers both GitHub Actions workflows
-2. Backend: Docker image built, pushed to ACR, deployed to Container App
-3. Frontend: Next.js built, deployed to Static Web App
+```bash
+# First-time: create resource group and deploy Bicep
+az group create --name rg-hhm-prod --location westus2
+az deployment group create \
+  --resource-group rg-hhm-prod \
+  --template-file infra/main.bicep \
+  --parameters location=westus2 googleClientId=XXX googleClientSecret=XXX sessionSecretKey=XXX
+
+# CI/CD: push to main branch triggers deploy.yml automatically
+```
+
+## Secrets (GitHub Actions)
+
+| Secret | Description |
+|---|---|
+| `AZURE_CLIENT_ID` | Federated credential for OIDC login |
+| `AZURE_TENANT_ID` | Azure AD tenant |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription |
+| `ACR_LOGIN_SERVER` | `acrhhmprod.azurecr.io` |
+
+## Key Dependencies
+
+- `fastapi` + `uvicorn` — web server
+- `jinja2` — HTML templates
+- `python-multipart` — form data parsing
+- `itsdangerous` + `starlette` — signed session cookies
+- `python-jose` — JWT encoding/decoding
+- `google-api-python-client` — Gmail, Drive, Calendar
+- `azure-cosmos` — user store
+- `azure-keyvault-secrets` + `azure-identity` — secrets management
+- `httpx` — async HTTP (Todoist API)
