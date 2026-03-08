@@ -1,0 +1,17 @@
+{% if success %}
+<div class="fixed bottom-6 right-6 z-50 bg-green-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium"
+     hx-get="" hx-trigger="load delay:3s" hx-target="this" hx-swap="outerHTML">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+  </svg>
+  Email sent successfully!
+</div>
+{% else %}
+<div class="fixed bottom-6 right-6 z-50 bg-red-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+  Failed to send: {{ error }}
+  <button onclick="this.parentElement.remove()" class="ml-2 opacity-75 hover:opacity-100">&times;</button>
+</div>
+{% endif %}
