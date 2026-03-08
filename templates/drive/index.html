@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Drive - Happy House Manager{% endblock %}
+{% block page_title %}Google Drive{% endblock %}
+
+{% block header_actions %}
+  <button
+    hx-get="/drive/upload"
+    hx-target="#modal-container"
+    hx-swap="innerHTML"
+    class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+    Upload File
+  </button>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+  <div id="modal-container"></div>
+  <div id="upload-result"></div>
+
+  {% if files %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    {% for file in files %}
+      <a href="{{ file.webViewLink }}" target="_blank" rel="noopener noreferrer"
+         class="group bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-green-300 transition-all block">
+        <!-- File icon based on mimeType -->
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3
+          {% if 'folder' in file.mimeType %}bg-yellow-100
+          {% elif 'image' in file.mimeType %}bg-pink-100
+          {% elif 'pdf' in file.mimeType %}bg-red-100
+          {% elif 'spreadsheet' in file.mimeType or 'excel' in file.mimeType %}bg-green-100
+          {% elif 'document' in file.mimeType or 'word' in file.mimeType %}bg-blue-100
+          {% else %}bg-slate-100{% endif %}">
+          <svg class="w-5 h-5
+            {% if 'folder' in file.mimeType %}text-yellow-600
+            {% elif 'image' in file.mimeType %}text-pink-600
+            {% elif 'pdf' in file.mimeType %}text-red-600
+            {% elif 'spreadsheet' in file.mimeType or 'excel' in file.mimeType %}text-green-600
+            {% elif 'document' in file.mimeType or 'word' in file.mimeType %}text-blue-600
+            {% else %}text-slate-500{% endif %}"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {% if 'folder' in file.mimeType %}
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            {% else %}
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            {% endif %}
+          </svg>
+        </div>
+        <p class="text-xs font-medium text-slate-800 truncate group-hover:text-green-700">{{ file.name }}</p>
+        <p class="text-xs text-slate-400 mt-0.5 truncate">{{ file.modifiedTime[:10] if file.modifiedTime else '' }}</p>
+        {% if file.size %}
+          <p class="text-xs text-slate-400">{{ (file.size | int / 1024) | round(1) }} KB</p>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-16 text-center">
+    <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+    <p class="text-sm text-slate-500">No files found.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

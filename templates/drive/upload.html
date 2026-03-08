@@ -1,0 +1,45 @@
+<!-- Upload modal -->
+<div class="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"
+     id="upload-modal">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h2 class="font-semibold text-slate-900">Upload File</h2>
+      <button onclick="document.getElementById('upload-modal').remove()" class="text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <form
+      hx-post="/drive/upload"
+      hx-target="#upload-result"
+      hx-swap="innerHTML"
+      hx-encoding="multipart/form-data"
+      hx-on::after-request="document.getElementById('upload-modal').remove()"
+      class="px-6 py-5 space-y-4">
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">File</label>
+        <input type="file" name="file" required
+               class="w-full text-sm text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Folder ID (optional)</label>
+        <input type="text" name="folder_id" placeholder="Leave blank for root"
+               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div class="flex justify-end gap-3 pt-1">
+        <button type="button" onclick="document.getElementById('upload-modal').remove()"
+                class="text-sm text-slate-600 hover:text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+          Cancel
+        </button>
+        <button type="submit"
+                class="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+          Upload
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

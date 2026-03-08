@@ -1,0 +1,12 @@
+{% if success %}
+<div class="mb-4 rounded-xl bg-green-50 border border-green-200 px-5 py-4 flex items-center gap-3 text-sm text-green-800">
+  <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+  </svg>
+  Task <strong>{{ task.content }}</strong> created.
+</div>
+{% else %}
+<div class="mb-4 rounded-xl bg-red-50 border border-red-200 px-5 py-4 text-sm text-red-700">
+  Failed to create task: {{ error }}
+</div>
+{% endif %}

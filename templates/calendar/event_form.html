@@ -1,0 +1,76 @@
+<!-- New Event Modal -->
+<div class="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"
+     id="event-modal">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h2 class="font-semibold text-slate-900">New Event</h2>
+      <button onclick="document.getElementById('event-modal').remove()" class="text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <form
+      hx-post="/calendar/event"
+      hx-target="#event-result"
+      hx-swap="innerHTML"
+      hx-on::after-request="document.getElementById('event-modal').remove()"
+      class="px-6 py-5 space-y-4">
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Title *</label>
+        <input type="text" name="summary" required
+               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Start *</label>
+          <input type="datetime-local" name="start" required
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">End *</label>
+          <input type="datetime-local" name="end" required
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Description</label>
+        <textarea name="description" rows="2"
+                  class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Attendees (comma-separated emails)</label>
+        <input type="text" name="attendees" placeholder="user@example.com, other@example.com"
+               class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Time Zone</label>
+        <select name="time_zone"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="America/Chicago">Central Time</option>
+          <option value="America/New_York">Eastern Time</option>
+          <option value="America/Denver">Mountain Time</option>
+          <option value="America/Los_Angeles">Pacific Time</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-1">
+        <button type="button" onclick="document.getElementById('event-modal').remove()"
+                class="text-sm text-slate-600 hover:text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+          Cancel
+        </button>
+        <button type="submit"
+                class="bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+          Create Event
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

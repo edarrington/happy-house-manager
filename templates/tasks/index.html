@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks - Happy House Manager{% endblock %}
+{% block page_title %}Tasks{% endblock %}
+
+{% block header_actions %}
+  {% if todoist_configured %}
+  <button
+    hx-get="/tasks/new"
+    hx-target="#modal-container"
+    hx-swap="innerHTML"
+    class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+    Add Task
+  </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+  <div id="modal-container"></div>
+  <div id="task-result"></div>
+
+  {% if not todoist_configured %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">
+      <strong>Todoist not connected.</strong> {{ error }}
+    </div>
+
+  {% else %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+      <!-- Projects sidebar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100">
+          <h2 class="text-sm font-semibold text-slate-700">Projects</h2>
+        </div>
+        <ul class="divide-y divide-slate-100">
+          {% for project in projects %}
+            <li>
+              <button
+                class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-green-700 transition-colors flex items-center gap-2"
+                hx-get="/tasks/project/{{ project.id }}/tasks"
+                hx-target="#task-list"
+                hx-swap="innerHTML"
+                hx-indicator="#global-loading">
+                <span class="w-2 h-2 rounded-full flex-shrink-0"
+                      style="background-color: {{ project.color or '#22c55e' }}"></span>
+                <span class="truncate">{{ project.name }}</span>
+                {% if project.comment_count %}
+                  <span class="ml-auto text-xs text-slate-400">{{ project.comment_count }}</span>
+                {% endif %}
+              </button>
+            </li>
+          {% else %}
+            <li class="px-4 py-6 text-center text-xs text-slate-400">No projects</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Tasks main area -->
+      <div class="lg:col-span-2">
+        <div id="task-list">
+          {% include "tasks/task_list.html" %}
+        </div>
+      </div>
+
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
