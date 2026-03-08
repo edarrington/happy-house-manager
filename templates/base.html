@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Happy House Manager{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            green: {
+              500: '#22c55e',
+              600: '#16a34a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+    .htmx-request .htmx-indicator { opacity: 1; }
+    .htmx-request.htmx-indicator { opacity: 1; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-50">
+
+<div class="flex h-full min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 flex-shrink-0 bg-slate-900 flex flex-col">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
+      <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      </div>
+      <span class="text-white font-semibold text-sm tracking-wide">Happy House</span>
+    </div>
+
+    <!-- Nav links -->
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      {% set nav_items = [
+        ('dashboard', '/dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', 'Dashboard'),
+        ('gmail', '/gmail', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', 'Gmail'),
+        ('drive', '/drive', 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', 'Drive'),
+        ('calendar', '/calendar', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', 'Calendar'),
+        ('tasks', '/tasks', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', 'Tasks'),
+      ] %}
+      {% for page_key, href, icon_path, label in nav_items %}
+        {% set is_active = active_page == page_key %}
+        <a href="{{ href }}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                  {% if is_active %}bg-green-500 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %}">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}" />
+          </svg>
+          {{ label }}
+        </a>
+      {% endfor %}
+    </nav>
+
+    <!-- User section -->
+    <div class="px-3 pb-4 border-t border-slate-700 pt-4">
+      {% if user %}
+      <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800 mb-2">
+        {% if user.picture %}
+          <img src="{{ user.picture }}" alt="{{ user.name }}" class="w-8 h-8 rounded-full object-cover" />
+        {% else %}
+          <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold">
+            {{ (user.given_name or user.name or user.email)[0].upper() }}
+          </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-xs font-medium truncate">{{ user.given_name or user.name }}</p>
+          <p class="text-slate-400 text-xs truncate">{{ user.email }}</p>
+        </div>
+      </div>
+      <a href="/auth/switch"
+         class="flex items-center gap-2 px-3 py-2 w-full text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+        Switch User
+      </a>
+      <a href="/auth/logout"
+         class="flex items-center gap-2 px-3 py-2 w-full text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg text-xs font-medium transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Sign Out
+      </a>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-y-auto">
+    <!-- Top bar -->
+    <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+      <h1 class="text-lg font-semibold text-slate-800">{% block page_title %}{% endblock %}</h1>
+      <div class="flex items-center gap-3">
+        <!-- Loading indicator -->
+        <div id="global-loading" class="htmx-indicator flex items-center gap-2 text-sm text-slate-500">
+          <svg class="animate-spin w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading...
+        </div>
+        {% block header_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <div class="p-8">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+
+<script>
+  // Make HTMX use the global loading indicator
+  document.body.addEventListener('htmx:configRequest', function(evt) {
+    evt.detail.headers['X-HMX-Request'] = 'true';
+  });
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
