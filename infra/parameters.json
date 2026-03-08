@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "environment": {
+      "value": "production"
+    },
+    "googleClientId": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<your-subscription-id>/resourceGroups/rg-happy-house-manager/providers/Microsoft.KeyVault/vaults/kv-happy-house-manager"
+        },
+        "secretName": "google-client-id"
+      }
+    },
+    "googleClientSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<your-subscription-id>/resourceGroups/rg-happy-house-manager/providers/Microsoft.KeyVault/vaults/kv-happy-house-manager"
+        },
+        "secretName": "google-client-secret"
+      }
+    },
+    "jwtSecretKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<your-subscription-id>/resourceGroups/rg-happy-house-manager/providers/Microsoft.KeyVault/vaults/kv-happy-house-manager"
+        },
+        "secretName": "jwt-secret-key"
+      }
+    }
+  }
+}
