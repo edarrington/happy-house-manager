@@ -15,6 +15,7 @@ env:
   CONTAINER_APP: ca-hhm-prod
   IMAGE_NAME: happy-house-manager
   ACR_NAME: acrhhmprod
+  MANAGED_IDENTITY_ID: /subscriptions/1b98522b-bc4a-4790-a8e0-66c1aa8a85f0/resourceGroups/rg-hhm-prod/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-hhm-prod
 
 jobs:
   build-and-deploy:
@@ -32,31 +33,37 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to Azure Container Registry
-        run: |
-          az acr login --name ${{ env.ACR_NAME }}
+        run: az acr login --name ${{ env.ACR_NAME }}
 
-      - name: Build Docker image
+      - name: Build and push Docker image
         run: |
           docker build \
             --tag ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             --tag ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest \
             .
-
-      - name: Push Docker image
-        run: |
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Deploy to Container App
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          containerAppName: ${{ env.CONTAINER_APP }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Install containerapp extension
+        run: az extension add --name containerapp --upgrade --yes
+
+      - name: Configure ACR registry on Container App
+        run: |
+          az containerapp registry set \
+            --name ${{ env.CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --identity ${{ env.MANAGED_IDENTITY_ID }}
+
+      - name: Deploy image to Container App
+        run: |
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Verify deployment
         run: |
-          echo "Checking container app status..."
           az containerapp show \
             --name ${{ env.CONTAINER_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
