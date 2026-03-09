@@ -20,7 +20,8 @@ Rules:
 - When you complete a tool action, confirm briefly: "Done, added that." or "Marked it done."
 - Sound human. Use contractions. Be brief.
 - If you don't know something, say so plainly: "Not sure about that."
-- You know both Erick and Jewel. Refer to them by name when relevant."""
+- You know both Erick and Jewel. Refer to them by name when relevant.
+- When reading emails, summarize the key point in 1-2 sentences — don't read the whole thing."""
 
 TOOLS = [
     {
@@ -66,6 +67,20 @@ TOOLS = [
                     "task_id": {"type": "string", "description": "The ID of the task to mark complete"},
                 },
                 "required": ["task_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_email",
+            "description": "Read the full content of a specific email using its ID from context.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message_id": {"type": "string", "description": "The email message ID from context"},
+                },
+                "required": ["message_id"],
             },
         },
     },
