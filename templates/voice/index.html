@@ -5,12 +5,10 @@
 {% block content %}
 <div class="flex flex-col items-center justify-center min-h-[60vh] select-none">
 
-  <!-- Status text -->
   <p id="status-text" class="text-sm text-slate-400 mb-10 tracking-wide uppercase font-medium">
     Click to start
   </p>
 
-  <!-- Mic orb -->
   <button id="mic-btn"
     class="relative w-28 h-28 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center transition-all duration-300 hover:border-green-500 focus:outline-none"
     onclick="toggleVoice()">
@@ -36,7 +34,8 @@
   const STATE = { IDLE: 'idle', LISTENING: 'listening', PROCESSING: 'processing', SPEAKING: 'speaking' };
   let state = STATE.IDLE;
   let recognition = null;
-  let currentAudio = null;
+  let audioCtx = null;
+  let currentSource = null;
   let history = [];
   let active = false;
 
@@ -46,6 +45,15 @@
   const statusText = document.getElementById('status-text');
   const interimText = document.getElementById('interim-text');
   const conversation = document.getElementById('conversation');
+
+  function unlockAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
 
   function setState(s) {
     state = s;
@@ -98,23 +106,29 @@
       interimText.textContent = interim || final;
       if (final) sendToTyrone(final.trim());
     };
-    r.onerror = (e) => {
-      if (e.error === 'no-speech' && active) r.start();
-    };
-    r.onend = () => {
-      if (active && state === STATE.LISTENING) r.start();
-    };
+    r.onerror = (e) => { if (e.error === 'no-speech' && active) r.start(); };
+    r.onend = () => { if (active && state === STATE.LISTENING) r.start(); };
     return r;
   }
 
-  function playAudio(base64Audio) {
+  async function playAudio(base64Audio) {
     setState(STATE.SPEAKING);
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    const audio = new Audio('data:audio/mpeg;base64,' + base64Audio);
-    currentAudio = audio;
-    audio.onended = () => { currentAudio = null; if (active) restartListening(); };
-    audio.onerror = () => { currentAudio = null; if (active) restartListening(); };
-    audio.play().catch(() => { if (active) restartListening(); });
+    if (currentSource) { try { currentSource.stop(); } catch(e) {} currentSource = null; }
+    try {
+      const binary = atob(base64Audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const buffer = await audioCtx.decodeAudioData(bytes.buffer);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      currentSource = source;
+      source.onended = () => { currentSource = null; if (active) restartListening(); };
+      source.start(0);
+    } catch(e) {
+      console.error('Audio playback failed:', e);
+      if (active) restartListening();
+    }
   }
 
   function restartListening() {
@@ -142,9 +156,8 @@
         if (history.length > 20) history = history.slice(-20);
         addMessage('assistant', reply);
         if (data.audio_b64) {
-          playAudio(data.audio_b64);
+          await playAudio(data.audio_b64);
         } else {
-          // Fallback to browser TTS if OpenAI TTS unavailable
           const utt = new SpeechSynthesisUtterance(reply);
           utt.onend = () => { if (active) restartListening(); };
           window.speechSynthesis.speak(utt);
@@ -153,7 +166,7 @@
       } else {
         restartListening();
       }
-    } catch (err) {
+    } catch(err) {
       console.error('Tyrone error:', err);
       restartListening();
     }
@@ -161,14 +174,14 @@
 
   window.toggleVoice = function() {
     if (!active) {
+      unlockAudio(); // Must be called during user gesture to allow audio playback
       active = true;
       recognition = setupRecognition();
       if (!recognition) { active = false; return; }
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       recognition.start();
     } else {
       active = false;
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      if (currentSource) { try { currentSource.stop(); } catch(e) {} currentSource = null; }
       window.speechSynthesis.cancel();
       if (recognition) { recognition.stop(); recognition = null; }
       setState(STATE.IDLE);
