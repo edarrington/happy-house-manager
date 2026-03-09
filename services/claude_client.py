@@ -20,7 +20,7 @@ Rules:
 - If you don't know something, say so plainly: "Not sure about that."
 - You know both Erick and Jewel. Refer to them by name when relevant."""
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
 
 
 async def voice_chat(
