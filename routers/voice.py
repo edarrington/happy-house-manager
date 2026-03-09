@@ -14,6 +14,7 @@ from services.cosmos_client import cosmos_store
 from services.claude_client import voice_chat
 from services.todoist_client import TodoistClient
 from services.google_client import build_calendar_service
+from services.gmail_reader import list_inbox, get_message
 from config import settings
 
 router = APIRouter()
@@ -77,6 +78,21 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
     except Exception as e:
         logger.warning(f"Could not fetch calendar for voice context: {e}")
 
+    try:
+        inbox = list_inbox(max_results=10)
+        if inbox:
+            unread = [m for m in inbox if m["unread"]]
+            if unread:
+                lines = [
+                    f"- [ID:{m['id']}] From: {m['from']} | Subject: {m['subject']}"
+                    for m in unread[:5]
+                ]
+                context_parts.append(f"Unread emails ({len(unread)}):\n" + "\n".join(lines))
+            else:
+                context_parts.append("No unread emails.")
+    except Exception as e:
+        logger.warning(f"Could not fetch emails for voice context: {e}")
+
     return "\n\n".join(context_parts)
 
 
@@ -136,6 +152,22 @@ async def _complete_todoist_task(current_user: Dict, task_id: str) -> str:
         return f"Failed to complete task: {e}"
 
 
+async def _read_email(message_id: str) -> str:
+    try:
+        msg = get_message(message_id)
+        if not msg:
+            return "Could not fetch that email."
+        return (
+            f"From: {msg['from']}\n"
+            f"Subject: {msg['subject']}\n"
+            f"Date: {msg['date']}\n\n"
+            f"{msg['body'][:1000]}"
+        )
+    except Exception as e:
+        logger.error(f"Email read failed: {e}")
+        return f"Failed to read email: {e}"
+
+
 @router.get("/", include_in_schema=False)
 async def voice_page(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
     return templates.TemplateResponse(
@@ -166,6 +198,8 @@ async def voice_chat_endpoint(
             return await _create_todoist_task(current_user, **args)
         if name == "complete_todoist_task":
             return await _complete_todoist_task(current_user, **args)
+        if name == "read_email":
+            return await _read_email(**args)
         return "Unknown tool."
 
     response_text = await voice_chat(transcript, history, context, user_name, execute_tool)
