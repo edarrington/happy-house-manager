@@ -1,10 +1,13 @@
-"""Gmail router: full pages + HTMX partials."""
+"""Gmail router: full pages + HTMX partials.
+
+Uses gmail.metadata scope (sensitive, not restricted) — can list messages and
+read headers/labels but NOT message body content.
+"""
 
 import base64
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
 from typing import Optional, Any, Dict
 import logging
 
@@ -52,7 +55,6 @@ async def gmail_index(request: Request, current_user: Dict[str, Any] = Depends(g
             messages.append({
                 "id": detail["id"],
                 "threadId": detail["threadId"],
-                "snippet": detail.get("snippet", ""),
                 "subject": headers_map.get("Subject", "(no subject)"),
                 "from": headers_map.get("From", ""),
                 "date": headers_map.get("Date", ""),
@@ -76,22 +78,14 @@ async def get_message_partial(
     request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    """Return message detail as HTMX partial."""
+    """Return message detail as HTMX partial (metadata only — no body with current scopes)."""
     try:
         service = await build_gmail_service(current_user["sub"], cosmos_store)
-        detail = service.users().messages().get(userId="me", id=message_id, format="full").execute()
+        detail = service.users().messages().get(
+            userId="me", id=message_id, format="metadata",
+            metadataHeaders=["Subject", "From", "To", "Date"]
+        ).execute()
         headers_map = {h["name"]: h["value"] for h in detail.get("payload", {}).get("headers", [])}
-
-        body = ""
-        payload = detail.get("payload", {})
-        if payload.get("body", {}).get("data"):
-            body = base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", errors="replace")
-        elif payload.get("parts"):
-            for part in payload["parts"]:
-                if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
-                    body = base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", errors="replace")
-                    break
-
         message = {
             "id": detail["id"],
             "threadId": detail["threadId"],
@@ -99,7 +93,7 @@ async def get_message_partial(
             "from": headers_map.get("From", ""),
             "to": headers_map.get("To", ""),
             "date": headers_map.get("Date", ""),
-            "body": body,
+            "body": None,  # gmail.metadata scope does not allow reading body content
         }
     except Exception as e:
         logger.error(f"Gmail get_message error: {e}")
@@ -175,7 +169,6 @@ async def api_list_messages(
             detailed.append({
                 "id": detail["id"],
                 "threadId": detail["threadId"],
-                "snippet": detail.get("snippet", ""),
                 "subject": headers_map.get("Subject", "(no subject)"),
                 "from": headers_map.get("From", ""),
                 "date": headers_map.get("Date", ""),
