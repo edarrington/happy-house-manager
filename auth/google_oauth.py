@@ -13,13 +13,13 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
+# Basic scopes only — no sensitive/restricted scopes to avoid Google blocking
+# unverified apps. Sensitive scopes (gmail, drive, calendar) will be requested
+# incrementally per-feature once the user is logged in.
 SCOPES = [
     "openid",
     "email",
     "profile",
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/drive.readonly",
-    "https://www.googleapis.com/auth/calendar.readonly",
 ]
 
 
@@ -31,7 +31,7 @@ def get_authorization_url(state: Optional[str] = None) -> str:
         "response_type": "code",
         "scope": " ".join(SCOPES),
         "access_type": "offline",
-        "prompt": "consent",  # Always get refresh_token
+        "prompt": "consent",
     }
     if state:
         params["state"] = state
