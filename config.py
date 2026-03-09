@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     azure_client_secret: str = ""
     azure_tenant_id: str = ""
 
-    # Gemini
-    gemini_api_key: str = ""
+    # OpenAI
+    openai_api_key: str = ""
 
     # App
     app_base_url: str = "http://localhost:8000"
