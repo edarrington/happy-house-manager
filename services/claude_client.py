@@ -1,6 +1,6 @@
-"""Claude API client for Eon voice assistant."""
+"""Gemini API client for Eon voice assistant."""
 
-import anthropic
+import google.generativeai as genai
 from typing import List, Dict, Any
 from config import settings
 import logging
@@ -29,27 +29,33 @@ async def voice_chat(
     context: str,
     user_name: str,
 ) -> str:
-    """Send a voice transcript to Claude and get a brief spoken response."""
-    if not settings.anthropic_api_key:
-        return "Anthropic API key not configured. Add it in settings."
+    """Send a voice transcript to Gemini and get a brief spoken response."""
+    if not settings.gemini_api_key:
+        return "Gemini API key not configured."
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    genai.configure(api_key=settings.gemini_api_key)
 
     system = SYSTEM_PROMPT
     if context:
         system += f"\n\nCurrent context for {user_name}:\n{context}"
 
-    messages = history[-10:]  # keep last 10 turns for context
-    messages.append({"role": "user", "content": transcript})
+    # Build Gemini chat history (exclude last user message — sent separately)
+    gemini_history = []
+    for msg in history[-10:]:
+        role = "user" if msg["role"] == "user" else "model"
+        gemini_history.append({"role": role, "parts": [msg["content"]]})
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=150,
-            system=system,
-            messages=messages,
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash",
+            system_instruction=system,
         )
-        return response.content[0].text
+        chat = model.start_chat(history=gemini_history)
+        response = chat.send_message(
+            transcript,
+            generation_config=genai.types.GenerationConfig(max_output_tokens=150),
+        )
+        return response.text
     except Exception as e:
-        logger.error(f"Claude API error: {e}")
+        logger.error(f"Gemini API error: {e}")
         return "I ran into an issue. Try again in a moment."
