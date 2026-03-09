@@ -13,15 +13,16 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
-# Sensitive scopes only (no restricted scopes — those require Google verification).
-# gmail.readonly + gmail.send + gmail.compose cover read/send without restricted modify.
-# drive.metadata.readonly lets us list/browse files without restricted drive.readonly.
-# calendar.readonly is sensitive and works fine.
+# Sensitive scopes only — no restricted scopes (restricted requires Google verification).
+# gmail.metadata: list/search inbox, read headers/labels (no body content) — sensitive
+# gmail.send + gmail.compose: send and draft emails — sensitive
+# drive.metadata.readonly: list files + metadata — sensitive
+# calendar.readonly: read events — sensitive
 SCOPES = [
     "openid",
     "email",
     "profile",
-    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.metadata",
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/gmail.compose",
     "https://www.googleapis.com/auth/drive.metadata.readonly",
