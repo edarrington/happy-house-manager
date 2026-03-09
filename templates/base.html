@@ -24,15 +24,19 @@
     .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
     .htmx-request .htmx-indicator { opacity: 1; }
     .htmx-request.htmx-indicator { opacity: 1; }
+    #sidebar { transition: transform 0.25s ease; }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body class="h-full bg-slate-50">
 
+<!-- Mobile overlay -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden" onclick="closeSidebar()"></div>
+
 <div class="flex h-full min-h-screen">
 
   <!-- Sidebar -->
-  <aside class="w-64 flex-shrink-0 bg-slate-900 flex flex-col">
+  <aside id="sidebar" class="fixed md:relative z-30 w-64 flex-shrink-0 bg-slate-900 flex flex-col h-full -translate-x-full md:translate-x-0">
     <!-- Logo -->
     <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
       <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
@@ -41,10 +45,16 @@
         </svg>
       </div>
       <span class="text-white font-semibold text-sm tracking-wide">Happy House</span>
+      <!-- Close button (mobile only) -->
+      <button onclick="closeSidebar()" class="ml-auto md:hidden text-slate-400 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
 
     <!-- Nav links -->
-    <nav class="flex-1 px-3 py-4 space-y-1">
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       {% set nav_items = [
         ('dashboard', '/dashboard', 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', 'Dashboard'),
         ('gmail', '/gmail', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', 'Gmail'),
@@ -56,7 +66,7 @@
       ] %}
       {% for page_key, href, icon_path, label in nav_items %}
         {% set is_active = active_page == page_key %}
-        <a href="{{ href }}"
+        <a href="{{ href }}" onclick="closeSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                   {% if is_active %}bg-green-500 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %}">
           <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,12 +112,19 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 overflow-y-auto">
+  <main class="flex-1 overflow-y-auto min-w-0">
     <!-- Top bar -->
-    <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
-      <h1 class="text-lg font-semibold text-slate-800">{% block page_title %}{% endblock %}</h1>
+    <header class="bg-white border-b border-slate-200 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-10">
       <div class="flex items-center gap-3">
-        <!-- Loading indicator -->
+        <!-- Hamburger (mobile only) -->
+        <button onclick="openSidebar()" class="md:hidden text-slate-600 hover:text-slate-900">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 class="text-lg font-semibold text-slate-800">{% block page_title %}{% endblock %}</h1>
+      </div>
+      <div class="flex items-center gap-3">
         <div id="global-loading" class="htmx-indicator flex items-center gap-2 text-sm text-slate-500">
           <svg class="animate-spin w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -120,7 +137,7 @@
     </header>
 
     <!-- Page content -->
-    <div class="p-8">
+    <div class="p-4 md:p-8">
       {% block content %}{% endblock %}
     </div>
   </main>
@@ -128,6 +145,27 @@
 </div>
 
 <script>
+  function openSidebar() {
+    document.getElementById('sidebar').style.transform = 'translateX(0)';
+    document.getElementById('sidebar-overlay').classList.remove('hidden');
+  }
+  function closeSidebar() {
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebar-overlay');
+    // Only animate closed on mobile
+    if (window.innerWidth < 768) {
+      sidebar.style.transform = 'translateX(-100%)';
+      overlay.classList.add('hidden');
+    }
+  }
+  // On resize, clear inline transform so CSS takes over
+  window.addEventListener('resize', function() {
+    if (window.innerWidth >= 768) {
+      document.getElementById('sidebar').style.transform = '';
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
+  });
+
   document.body.addEventListener('htmx:configRequest', function(evt) {
     evt.detail.headers['X-HMX-Request'] = 'true';
   });
