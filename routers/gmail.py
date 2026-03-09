@@ -1,19 +1,16 @@
-"""Gmail router: compose and send only.
-
-Inbox reading requires gmail.readonly (restricted scope) which needs Google
-verification. Until verified, only gmail.send (sensitive scope) is used,
-enabling outbound email only.
-"""
+"""Gmail router: inbox reading + compose/send."""
 
 import base64
+import logging
+from typing import Optional, Any, Dict
+
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from typing import Optional, Any, Dict
-import logging
 
 from auth.middleware import get_current_user
 from services.google_client import build_gmail_service
+from services.gmail_reader import list_inbox, get_message
 from services.cosmos_client import cosmos_store
 
 router = APIRouter()
@@ -33,20 +30,39 @@ def _build_raw_message(
 
 @router.get("/", include_in_schema=False)
 async def gmail_index(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Gmail page — compose/send only (inbox read requires Google verification)."""
+    """Gmail page with inbox."""
+    messages = []
+    error = None
+    try:
+        messages = list_inbox(max_results=25)
+    except Exception as e:
+        logger.error(f"Inbox fetch error: {e}")
+        error = "Could not load inbox. Check Gmail credentials."
+
     return templates.TemplateResponse(
         "gmail/index.html",
-        {"request": request, "user": current_user, "active_page": "gmail"},
+        {"request": request, "user": current_user, "active_page": "gmail",
+         "messages": messages, "error": error},
+    )
+
+
+@router.get("/message/{message_id}", response_class=HTMLResponse, include_in_schema=False)
+async def get_message_partial(
+    message_id: str,
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Return message detail as HTMX partial (also marks as read)."""
+    message = get_message(message_id)
+    return templates.TemplateResponse(
+        "gmail/message.html",
+        {"request": request, "message": message},
     )
 
 
 @router.get("/compose", response_class=HTMLResponse, include_in_schema=False)
 async def compose_partial(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Return compose form as HTMX partial."""
-    return templates.TemplateResponse(
-        "gmail/compose.html",
-        {"request": request, "user": current_user},
-    )
+    return templates.TemplateResponse("gmail/compose.html", {"request": request, "user": current_user})
 
 
 @router.post("/send", response_class=HTMLResponse, include_in_schema=False)
@@ -58,7 +74,6 @@ async def send_email(
     cc: Optional[str] = Form(None),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    """Send email and return a success/error partial."""
     try:
         service = await build_gmail_service(current_user["sub"], cosmos_store)
         profile = service.users().getProfile(userId="me").execute()

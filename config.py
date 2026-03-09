@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = ""
 
+    # Gmail desktop OAuth (thedarringtons20@gmail.com inbox reading)
+    gmail_desktop_client_id: str = ""
+    gmail_desktop_client_secret: str = ""
+    gmail_refresh_token: str = ""
+
     # App
     app_base_url: str = "http://localhost:8000"
     environment: str = "development"
