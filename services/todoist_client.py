@@ -9,6 +9,15 @@ logger = logging.getLogger(__name__)
 TODOIST_API_BASE = "https://api.todoist.com/api/v1"
 
 
+def _unwrap(response_json: Any) -> List[Dict[str, Any]]:
+    """Handle both plain array and paginated {results: [...]} responses."""
+    if isinstance(response_json, list):
+        return response_json
+    if isinstance(response_json, dict):
+        return response_json.get("results", [])
+    return []
+
+
 class TodoistClient:
     """Scoped to one user's API token."""
 
@@ -23,7 +32,7 @@ class TodoistClient:
         async with httpx.AsyncClient() as client:
             r = await client.get(f"{TODOIST_API_BASE}/projects", headers=self.headers)
             r.raise_for_status()
-            return r.json()
+            return _unwrap(r.json())
 
     async def get_tasks(
         self, project_id: Optional[str] = None, filter_str: Optional[str] = None
@@ -38,7 +47,7 @@ class TodoistClient:
                 f"{TODOIST_API_BASE}/tasks", headers=self.headers, params=params
             )
             r.raise_for_status()
-            return r.json()
+            return _unwrap(r.json())
 
     async def create_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
