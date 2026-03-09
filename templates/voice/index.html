@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Eon — Happy House{% endblock %}
-{% block page_title %}Eon{% endblock %}
+{% block title %}Tyrone — Happy House{% endblock %}
+{% block page_title %}Tyrone{% endblock %}
 
 {% block content %}
 <div class="flex flex-col items-center justify-center min-h-[60vh] select-none">
@@ -107,7 +107,7 @@
         else interim += e.results[i][0].transcript;
       }
       interimText.textContent = interim || final;
-      if (final) sendToEon(final.trim());
+      if (final) sendToTyrone(final.trim());
     };
 
     r.onerror = (e) => {
@@ -125,7 +125,7 @@
     return r;
   }
 
-  async function sendToEon(transcript) {
+  async function sendToTyrone(transcript) {
     if (!transcript) return;
     setState(STATE.PROCESSING);
     interimText.textContent = '';
@@ -149,7 +149,7 @@
         restartListening();
       }
     } catch (err) {
-      console.error('Eon error:', err);
+      console.error('Tyrone error:', err);
       restartListening();
     }
   }

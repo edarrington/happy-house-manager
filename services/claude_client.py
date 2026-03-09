@@ -1,4 +1,4 @@
-"""Gemini API client for Eon voice assistant."""
+"""Gemini API client for Tyrone voice assistant."""
 
 import google.generativeai as genai
 from typing import List, Dict, Any
@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are Eon, the voice assistant for Happy House Manager — Erick and Jewel Darrington's household AI.
+SYSTEM_PROMPT = """You are Tyrone, the voice assistant for Happy House Manager — Erick and Jewel Darrington's household AI.
 
 You help them manage their calendar, tasks, home life, and daily plans.
 
