@@ -55,9 +55,9 @@ app.include_router(voice.router, prefix="/voice", tags=["voice"])
 
 @app.get("/", include_in_schema=False)
 async def root(request: Request):
-    """Redirect root to dashboard if logged in, else to login."""
+    """Redirect root to Tyrone if logged in, else to login."""
     if request.state.user:
-        return RedirectResponse(url="/dashboard", status_code=302)
+        return RedirectResponse(url="/voice", status_code=302)
     return RedirectResponse(url="/auth/login", status_code=302)
 
 
