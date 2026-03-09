@@ -1,5 +1,6 @@
 """Gemini API client for Tyrone voice assistant."""
 
+import time
 import google.generativeai as genai
 from typing import List, Dict, Any
 from config import settings
@@ -45,17 +46,23 @@ async def voice_chat(
         role = "user" if msg["role"] == "user" else "model"
         gemini_history.append({"role": role, "parts": [msg["content"]]})
 
-    try:
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
-            system_instruction=system,
-        )
-        chat = model.start_chat(history=gemini_history)
-        response = chat.send_message(
-            transcript,
-            generation_config=genai.types.GenerationConfig(max_output_tokens=150),
-        )
-        return response.text
-    except Exception as e:
-        logger.error(f"Gemini API error: {e}")
-        return "I ran into an issue. Try again in a moment."
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system,
+    )
+
+    for attempt in range(2):
+        try:
+            chat = model.start_chat(history=gemini_history)
+            response = chat.send_message(
+                transcript,
+                generation_config=genai.types.GenerationConfig(max_output_tokens=150),
+            )
+            return response.text
+        except Exception as e:
+            err = str(e)
+            logger.error(f"Gemini API error (attempt {attempt + 1}): {err}")
+            if attempt == 0 and "quota" in err.lower():
+                time.sleep(5)
+                continue
+            return "Give me a second — just hit a rate limit. Try again."
