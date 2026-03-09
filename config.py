@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     azure_client_secret: str = ""
     azure_tenant_id: str = ""
 
+    # Anthropic
+    anthropic_api_key: str = ""
+
     # App
     app_base_url: str = "http://localhost:8000"
     environment: str = "development"
