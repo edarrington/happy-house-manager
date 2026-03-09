@@ -79,17 +79,16 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
         logger.warning(f"Could not fetch calendar for voice context: {e}")
 
     try:
-        inbox = list_inbox(max_results=10)
-        if inbox:
-            unread = [m for m in inbox if m["unread"]]
-            if unread:
-                lines = [
-                    f"- [ID:{m['id']}] From: {m['from']} | Subject: {m['subject']}"
-                    for m in unread[:5]
-                ]
-                context_parts.append(f"Unread emails ({len(unread)}):\n" + "\n".join(lines))
-            else:
-                context_parts.append("No unread emails.")
+        # Fetch today's emails (read and unread) using Gmail's newer_than query
+        today_emails = list_inbox(max_results=10, query="newer_than:1d")
+        if today_emails:
+            lines = [
+                f"- [ID:{m['id']}] {'(unread) ' if m['unread'] else ''}From: {m['from']} | Subject: {m['subject']}"
+                for m in today_emails
+            ]
+            context_parts.append(f"Emails received today ({len(today_emails)}):\n" + "\n".join(lines))
+        else:
+            context_parts.append("No emails received today.")
     except Exception as e:
         logger.warning(f"Could not fetch emails for voice context: {e}")
 
