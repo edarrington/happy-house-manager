@@ -24,7 +24,6 @@ def _build_service() -> Any:
         scopes=["https://www.googleapis.com/auth/gmail.readonly",
                 "https://www.googleapis.com/auth/gmail.modify"],
     )
-    # Always refresh to get a valid access token
     creds.refresh(GoogleRequest())
     return build("gmail", "v1", credentials=creds)
 
@@ -52,12 +51,14 @@ def _header(headers: list, name: str) -> str:
     return ""
 
 
-def list_inbox(max_results: int = 20) -> list[dict]:
-    """Return inbox messages (newest first)."""
+def list_inbox(max_results: int = 20, query: str = "") -> list[dict]:
+    """Return inbox messages (newest first). Optionally filter with a Gmail query string."""
     service = _build_service()
-    result = service.users().messages().list(
-        userId="me", labelIds=["INBOX"], maxResults=max_results
-    ).execute()
+    params: dict = {"userId": "me", "labelIds": ["INBOX"], "maxResults": max_results}
+    if query:
+        params["q"] = query
+
+    result = service.users().messages().list(**params).execute()
 
     messages = []
     for item in result.get("messages", []):
@@ -93,7 +94,6 @@ def get_message(message_id: str) -> dict | None:
     headers = msg.get("payload", {}).get("headers", [])
     body = _extract_body(msg.get("payload", {}))
 
-    # Mark as read
     label_ids = msg.get("labelIds", [])
     if "UNREAD" in label_ids:
         try:
