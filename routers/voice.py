@@ -1,10 +1,11 @@
-"""Voice assistant router — Tyrone with tool support."""
+"""Voice assistant router — Tyrone with tool support and OpenAI TTS."""
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from typing import Any, Dict, List
 from datetime import datetime, timezone
+import base64
 import httpx
 import logging
 
@@ -13,12 +14,30 @@ from services.cosmos_client import cosmos_store
 from services.claude_client import voice_chat
 from services.todoist_client import TodoistClient
 from services.google_client import build_calendar_service
+from config import settings
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
 
 TIMEZONE = "America/Los_Angeles"
+
+
+async def _text_to_speech(text: str) -> str | None:
+    """Convert text to speech via OpenAI TTS. Returns base64 MP3 or None."""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={"model": "tts-1", "input": text, "voice": "onyx"},
+            )
+        if resp.status_code == 200:
+            return base64.b64encode(resp.content).decode("utf-8")
+        logger.error(f"TTS error {resp.status_code}: {resp.text}")
+    except Exception as e:
+        logger.error(f"TTS failed: {e}")
+    return None
 
 
 async def _build_context(current_user: Dict[str, Any]) -> str:
@@ -28,7 +47,6 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
     now = datetime.now(timezone.utc)
     context_parts.append(f"Current date/time: {now.strftime('%A, %B %d, %Y %H:%M UTC')}")
 
-    # Todoist tasks — include IDs so Tyrone can complete them
     try:
         user_doc = await cosmos_store.get_user(user_id)
         if user_doc and user_doc.get("todoist_token"):
@@ -40,7 +58,6 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
     except Exception as e:
         logger.warning(f"Could not fetch tasks for voice context: {e}")
 
-    # Upcoming calendar events
     try:
         service = await build_calendar_service(user_id, cosmos_store)
         result = service.events().list(
@@ -152,4 +169,5 @@ async def voice_chat_endpoint(
         return "Unknown tool."
 
     response_text = await voice_chat(transcript, history, context, user_name, execute_tool)
-    return JSONResponse({"response": response_text})
+    audio_b64 = await _text_to_speech(response_text) if response_text else None
+    return JSONResponse({"response": response_text, "audio_b64": audio_b64})
