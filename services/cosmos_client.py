@@ -2,6 +2,7 @@
 
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
+from azure.identity.aio import DefaultAzureCredential
 from typing import Optional, Dict, Any
 from config import settings
 import logging
@@ -13,6 +14,7 @@ class CosmosUserStore:
     """
     Azure Cosmos DB user store.
     Each document is one user (Erick or Jewel), keyed by Google sub.
+    Uses managed identity (DefaultAzureCredential) for authentication.
     """
 
     def __init__(self):
@@ -21,9 +23,10 @@ class CosmosUserStore:
 
     async def _get_container(self):
         if self._container is None:
+            credential = DefaultAzureCredential()
             self._client = CosmosClient(
                 url=settings.cosmos_endpoint,
-                credential=settings.cosmos_key,
+                credential=credential,
             )
             db = self._client.get_database_client(settings.cosmos_database_name)
             self._container = db.get_container_client(settings.cosmos_users_container)
