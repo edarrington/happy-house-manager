@@ -1,4 +1,4 @@
-"""Todoist REST API v1 client."""
+"""Todoist API v1 client."""
 
 import httpx
 from typing import Any, Dict, List, Optional
@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-TODOIST_API_BASE = "https://api.todoist.com/rest/v1"
+TODOIST_API_BASE = "https://api.todoist.com/api/v1"
 
 
 class TodoistClient:
