@@ -9,7 +9,7 @@ import logging
 
 from config import settings
 from auth.middleware import AuthMiddleware
-from routers import auth, gmail, drive, calendar, todoist, settings as settings_router, voice
+from routers import auth, gmail, drive, calendar, todoist, settings as settings_router, voice, arcade as arcade_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,6 +51,7 @@ app.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 app.include_router(todoist.router, prefix="/tasks", tags=["tasks"])
 app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
 app.include_router(voice.router, prefix="/voice", tags=["voice"])
+app.include_router(arcade_router.router, prefix="/arcade", tags=["arcade"])
 
 
 @app.get("/", include_in_schema=False)

@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     gmail_desktop_client_secret: str = ""
     gmail_refresh_token: str = ""
 
+    # Arcade AI
+    arcade_api_key: str = ""
+
     # App
     app_base_url: str = "http://localhost:8000"
     environment: str = "development"

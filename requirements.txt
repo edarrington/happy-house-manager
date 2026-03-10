@@ -29,3 +29,6 @@ google-api-python-client==2.156.0
 azure-cosmos==4.9.0
 azure-keyvault-secrets==4.9.0
 azure-identity==1.19.0
+
+# Arcade AI
+arcadepy==1.10.0

@@ -13,7 +13,7 @@ from auth.middleware import get_current_user
 from services.cosmos_client import cosmos_store
 from services.claude_client import voice_chat
 from services.todoist_client import TodoistClient
-from services.google_client import build_calendar_service
+from services.arcade_client import call_tool as arcade_call
 from services.gmail_reader import list_inbox, get_message
 from config import settings
 
@@ -97,14 +97,14 @@ async def _create_calendar_event(
     current_user: Dict, title: str, start: str, end: str, description: str = ""
 ) -> str:
     try:
-        service = await build_calendar_service(current_user["sub"], cosmos_store)
-        event = {
-            "summary": title,
-            "description": description,
-            "start": {"dateTime": start, "timeZone": TIMEZONE},
-            "end": {"dateTime": end, "timeZone": TIMEZONE},
-        }
-        service.events().insert(calendarId="primary", body=event).execute()
+        user_email = current_user.get("email", "")
+        await arcade_call(
+            "GoogleCalendar.CreateEvent", user_email,
+            summary=title,
+            start_datetime=start,
+            end_datetime=end,
+            description=description,
+        )
         return f"Created calendar event '{title}'."
     except Exception as e:
         logger.error(f"Calendar create failed: {e}")

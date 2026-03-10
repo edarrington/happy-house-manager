@@ -8,6 +8,7 @@ import logging
 
 from auth.middleware import get_current_user
 from services.cosmos_client import cosmos_store
+from services.arcade_client import is_authorized, GMAIL_USER_ID
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 async def settings_page(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
     user_doc = await cosmos_store.get_user(current_user["sub"])
     todoist_configured = bool(user_doc and user_doc.get("todoist_token"))
+    gmail_connected = await is_authorized("Gmail.ListEmails", GMAIL_USER_ID)
+    calendar_connected = await is_authorized("GoogleCalendar.ListEvents", current_user.get("email", ""))
     return templates.TemplateResponse(
         "settings.html",
         {
@@ -25,6 +28,8 @@ async def settings_page(request: Request, current_user: Dict[str, Any] = Depends
             "user": current_user,
             "active_page": "settings",
             "todoist_configured": todoist_configured,
+            "gmail_connected": gmail_connected,
+            "calendar_connected": calendar_connected,
             "saved": False,
         },
     )
