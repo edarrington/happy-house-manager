@@ -1,32 +1,28 @@
-"""Google OAuth 2.0 helpers."""
+"""Google OAuth helpers: authorization URL, token exchange, user info, revoke."""
 
 import httpx
 from typing import Optional, Dict, Any
-from urllib.parse import urlencode
 from config import settings
-import logging
-
-logger = logging.getLogger(__name__)
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
 GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
-# Only sensitive (not restricted) scopes — restricted scopes block unverified apps.
-# Verified sensitive: gmail.send, calendar.readonly
-# All Gmail read scopes, drive scopes, and gmail.compose are restricted — require Google verification.
 SCOPES = [
     "openid",
     "email",
     "profile",
     "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/calendar.readonly",
 ]
 
 
 def get_authorization_url(state: Optional[str] = None) -> str:
     """Build the Google OAuth authorization URL."""
+    from urllib.parse import urlencode
     params = {
         "client_id": settings.google_client_id,
         "redirect_uri": settings.google_redirect_uri,
