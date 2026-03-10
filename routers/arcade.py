@@ -21,7 +21,7 @@ async def connect_gmail(
     """Redirect user to Arcade Google auth for the shared Gmail inbox."""
     if await is_authorized("Gmail.ListEmails", GMAIL_USER_ID):
         return RedirectResponse("/settings?gmail=connected")
-    next_uri = f"{settings.app_base_url}/arcade/done?service=gmail"
+    next_uri = f"{settings.app_base_url}/arcade/gmail-done"
     auth_url = await get_auth_url("Gmail.ListEmails", GMAIL_USER_ID, next_uri=next_uri)
     return RedirectResponse(auth_url)
 
@@ -35,16 +35,15 @@ async def connect_calendar(
     user_email = current_user.get("email", "")
     if await is_authorized("GoogleCalendar.ListEvents", user_email):
         return RedirectResponse("/settings?calendar=connected")
-    next_uri = f"{settings.app_base_url}/arcade/done?service=calendar"
+    next_uri = f"{settings.app_base_url}/arcade/calendar-done"
     auth_url = await get_auth_url("GoogleCalendar.ListEvents", user_email, next_uri=next_uri)
     return RedirectResponse(auth_url)
 
 
-@router.get("/done", include_in_schema=False)
-async def arcade_done(
-    request: Request,
-    service: str = "",
-    current_user: Dict[str, Any] = Depends(get_current_user),
-):
-    """Landing page after Arcade authorization completes."""
-    return RedirectResponse(f"/settings?{service}=connected")
+@router.get("/gmail-done", include_in_schema=False)
+async def gmail_done(request: Request):
+    return RedirectResponse("/settings")
+
+@router.get("/calendar-done", include_in_schema=False)
+async def calendar_done(request: Request):
+    return RedirectResponse("/settings")
