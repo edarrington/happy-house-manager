@@ -30,14 +30,13 @@ def _build_raw_message(
 
 @router.get("/", include_in_schema=False)
 async def gmail_index(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Gmail page with inbox."""
     messages = []
     error = None
     try:
-        messages = await list_inbox(current_user["sub"], max_results=25)
+        messages = await list_inbox(max_results=25)
     except Exception as e:
         logger.error(f"Inbox fetch error: {e}")
-        error = "Could not load inbox. Re-login to grant inbox permissions if this is your first time."
+        error = "Could not load inbox. Gmail credentials may need to be refreshed."
 
     return templates.TemplateResponse(
         "gmail/index.html",
@@ -52,8 +51,7 @@ async def get_message_partial(
     request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    """Return message detail as HTMX partial (also marks as read)."""
-    message = await get_message(current_user["sub"], message_id)
+    message = await get_message(message_id)
     return templates.TemplateResponse(
         "gmail/message.html",
         {"request": request, "message": message},
