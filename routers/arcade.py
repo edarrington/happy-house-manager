@@ -7,7 +7,6 @@ from typing import Any, Dict
 
 from auth.middleware import get_current_user
 from services.arcade_client import is_authorized, get_auth_url, GMAIL_USER_ID
-from config import settings
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -21,8 +20,7 @@ async def connect_gmail(
     """Redirect user to Arcade Google auth for the shared Gmail inbox."""
     if await is_authorized("Gmail.ListEmails", GMAIL_USER_ID):
         return RedirectResponse("/settings?gmail=connected")
-    next_uri = f"{settings.app_base_url}/arcade/gmail-done"
-    auth_url = await get_auth_url("Gmail.ListEmails", GMAIL_USER_ID, next_uri=next_uri)
+    auth_url = await get_auth_url("Gmail.ListEmails", GMAIL_USER_ID)
     return RedirectResponse(auth_url)
 
 
@@ -35,8 +33,7 @@ async def connect_calendar(
     user_email = current_user.get("email", "")
     if await is_authorized("GoogleCalendar.ListEvents", user_email):
         return RedirectResponse("/settings?calendar=connected")
-    next_uri = f"{settings.app_base_url}/arcade/calendar-done"
-    auth_url = await get_auth_url("GoogleCalendar.ListEvents", user_email, next_uri=next_uri)
+    auth_url = await get_auth_url("GoogleCalendar.ListEvents", user_email)
     return RedirectResponse(auth_url)
 
 
