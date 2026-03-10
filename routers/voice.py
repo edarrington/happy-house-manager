@@ -25,7 +25,6 @@ TIMEZONE = "America/Los_Angeles"
 
 
 async def _text_to_speech(text: str) -> str | None:
-    """Convert text to speech via OpenAI TTS. Returns base64 MP3 or None."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
@@ -79,7 +78,7 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
         logger.warning(f"Could not fetch calendar for voice context: {e}")
 
     try:
-        recent = await list_inbox(user_id, max_results=5)
+        recent = await list_inbox(max_results=5)
         if recent:
             lines = [
                 f"- [ID:{m['id']}] {'(unread) ' if m['unread'] else ''}From: {m['from']} | Subject: {m['subject']} | Date: {m['date']}"
@@ -150,9 +149,9 @@ async def _complete_todoist_task(current_user: Dict, task_id: str) -> str:
         return f"Failed to complete task: {e}"
 
 
-async def _read_email(user_id: str, message_id: str) -> str:
+async def _read_email(message_id: str) -> str:
     try:
-        msg = await get_message(user_id, message_id)
+        msg = await get_message(message_id)
         if not msg:
             return "Could not fetch that email."
         return (
@@ -197,7 +196,7 @@ async def voice_chat_endpoint(
         if name == "complete_todoist_task":
             return await _complete_todoist_task(current_user, **args)
         if name == "read_email":
-            return await _read_email(current_user["sub"], **args)
+            return await _read_email(**args)
         return "Unknown tool."
 
     response_text = await voice_chat(transcript, history, context, user_name, execute_tool)
