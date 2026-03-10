@@ -7,7 +7,7 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # Fixed user ID for the shared household Gmail inbox
-GMAIL_USER_ID = "thedarringtons20@gmail.com"
+GMAIL_USER_ID = "erickdarrington@gmail.com"
 
 
 def _client() -> AsyncArcade:
