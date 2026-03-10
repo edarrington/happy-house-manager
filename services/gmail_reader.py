@@ -1,31 +1,13 @@
-"""Gmail inbox reader using pre-authorized desktop OAuth tokens for thedarringtons20@gmail.com."""
+"""Gmail inbox reader — uses the user's HHM Google credentials from Cosmos DB."""
 
 import base64
 import logging
 from typing import Any
 
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request as GoogleRequest
-from googleapiclient.discovery import build
-
-from config import settings
+from services.google_client import build_gmail_service
+from services.cosmos_client import cosmos_store
 
 logger = logging.getLogger(__name__)
-
-
-def _build_service() -> Any:
-    """Build Gmail service using desktop OAuth credentials."""
-    creds = Credentials(
-        token=None,
-        refresh_token=settings.gmail_refresh_token,
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=settings.gmail_desktop_client_id,
-        client_secret=settings.gmail_desktop_client_secret,
-        scopes=["https://www.googleapis.com/auth/gmail.readonly",
-                "https://www.googleapis.com/auth/gmail.modify"],
-    )
-    creds.refresh(GoogleRequest())
-    return build("gmail", "v1", credentials=creds)
 
 
 def _extract_body(payload: dict) -> str:
@@ -51,14 +33,12 @@ def _header(headers: list, name: str) -> str:
     return ""
 
 
-def list_inbox(max_results: int = 20, query: str = "") -> list[dict]:
-    """Return inbox messages (newest first). Optionally filter with a Gmail query string."""
-    service = _build_service()
-    params: dict = {"userId": "me", "labelIds": ["INBOX"], "maxResults": max_results}
-    if query:
-        params["q"] = query
-
-    result = service.users().messages().list(**params).execute()
+async def list_inbox(user_id: str, max_results: int = 20) -> list[dict]:
+    """Return inbox messages (newest first) for the given HHM user."""
+    service = await build_gmail_service(user_id, cosmos_store)
+    result = service.users().messages().list(
+        userId="me", labelIds=["INBOX"], maxResults=max_results
+    ).execute()
 
     messages = []
     for item in result.get("messages", []):
@@ -80,9 +60,9 @@ def list_inbox(max_results: int = 20, query: str = "") -> list[dict]:
     return messages
 
 
-def get_message(message_id: str) -> dict | None:
+async def get_message(user_id: str, message_id: str) -> dict | None:
     """Fetch full message and mark it as read."""
-    service = _build_service()
+    service = await build_gmail_service(user_id, cosmos_store)
     try:
         msg = service.users().messages().get(
             userId="me", id=message_id, format="full"
