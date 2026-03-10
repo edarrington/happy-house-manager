@@ -9,6 +9,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Special document ID for app-level config (not a user)
+_GMAIL_CONFIG_ID = "__gmail_config__"
+
 
 class CosmosUserStore:
     """
@@ -81,6 +84,38 @@ class CosmosUserStore:
         except Exception as e:
             logger.error(f"Error listing users: {e}")
             raise
+
+    # ------------------------------------------------------------------
+    # Gmail desktop OAuth credential storage
+    # Stored as a special config document (not tied to a user).
+    # The refresh token is updated here whenever Google rotates it.
+    # ------------------------------------------------------------------
+
+    async def get_gmail_credentials(self) -> Optional[Dict[str, Any]]:
+        """Return stored Gmail desktop OAuth credentials, or None."""
+        try:
+            container = await self._get_container()
+            item = await container.read_item(
+                item=_GMAIL_CONFIG_ID, partition_key=_GMAIL_CONFIG_ID
+            )
+            return item
+        except CosmosResourceNotFoundError:
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching Gmail credentials: {e}")
+            return None
+
+    async def update_gmail_refresh_token(self, new_refresh_token: str) -> None:
+        """Persist a rotated Gmail refresh token back to Cosmos DB."""
+        try:
+            container = await self._get_container()
+            existing = await self.get_gmail_credentials()
+            if existing:
+                existing["refresh_token"] = new_refresh_token
+                await container.upsert_item(body=existing)
+                logger.info("Gmail refresh token updated in Cosmos DB")
+        except Exception as e:
+            logger.error(f"Failed to update Gmail refresh token: {e}")
 
     async def close(self):
         if self._client:
