@@ -49,11 +49,13 @@ async def google_callback(request: Request, code: str = "", state: str = "", err
     try:
         tokens = await exchange_code_for_tokens(code)
         user_info = await get_user_info(tokens["access_token"])
+        user_id = user_info.get("sub") or user_info.get("id")
+        if not user_id:
+            logger.error(f"Google userinfo missing sub/id: {user_info}")
+            return RedirectResponse(url="/auth/login?error=token_exchange_failed", status_code=302)
     except Exception as e:
         logger.error(f"OAuth callback failed: {e}")
         return RedirectResponse(url="/auth/login?error=token_exchange_failed", status_code=302)
-
-    user_id = user_info["sub"]
 
     # Upsert user in Cosmos DB
     try:
