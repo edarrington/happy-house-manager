@@ -17,7 +17,7 @@ def _client() -> AsyncArcade:
 async def is_authorized(tool_name: str, user_id: str) -> bool:
     """Check whether a user has already authorized a tool."""
     try:
-        tool = await _client().tools.get(tool_name=tool_name, user_id=user_id)
+        tool = await _client().tools.get(tool_name, user_id=user_id)
         if tool.requirements and tool.requirements.authorization:
             return tool.requirements.authorization.token_status == "completed"
         return True
