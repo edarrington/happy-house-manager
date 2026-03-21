@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Arcade AI
     arcade_api_key: str = ""
 
+    # Weather (Open-Meteo, no API key required)
+    weather_lat: float = 34.0522  # Los Angeles default
+    weather_lon: float = -118.2437
+
     # App
     app_base_url: str = "http://localhost:8000"
     environment: str = "development"

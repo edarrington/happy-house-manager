@@ -24,6 +24,53 @@ logger = logging.getLogger(__name__)
 TIMEZONE = "America/Los_Angeles"
 
 
+def _weather_code_to_desc(code: int) -> str:
+    if code == 0:
+        return "Clear sky"
+    if code in (1, 2, 3):
+        return "Partly cloudy"
+    if code in (45, 48):
+        return "Foggy"
+    if code in (51, 53, 55):
+        return "Drizzle"
+    if code in (61, 63, 65):
+        return "Rain"
+    if code in (71, 73, 75):
+        return "Snow"
+    if code in (80, 81, 82):
+        return "Rain showers"
+    if code in (95, 96, 99):
+        return "Thunderstorm"
+    return "Cloudy"
+
+
+async def _fetch_weather() -> str:
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={settings.weather_lat}&longitude={settings.weather_lon}"
+            f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+            f"&temperature_unit=fahrenheit&wind_speed_unit=mph"
+            f"&timezone=America%2FLos_Angeles"
+        )
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+        if resp.status_code != 200:
+            logger.warning(f"Weather fetch returned {resp.status_code}")
+            return ""
+        data = resp.json()
+        current = data.get("current", {})
+        temp = current.get("temperature_2m")
+        humidity = current.get("relative_humidity_2m")
+        wind = current.get("wind_speed_10m")
+        code = current.get("weather_code", 0)
+        condition = _weather_code_to_desc(code)
+        return f"Current weather: {condition}, {temp}°F, {humidity}% humidity, wind {wind} mph"
+    except Exception as e:
+        logger.warning(f"Could not fetch weather: {e}")
+        return ""
+
+
 async def _text_to_speech(text: str) -> str | None:
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -47,6 +94,10 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
     now = datetime.now(timezone.utc)
     context_parts.append(f"Current date/time: {now.strftime('%A, %B %d, %Y %H:%M UTC')}")
 
+    weather = await _fetch_weather()
+    if weather:
+        context_parts.append(weather)
+
     try:
         user_doc = await cosmos_store.get_user(user_id)
         if user_doc and user_doc.get("todoist_token"):
@@ -59,15 +110,15 @@ async def _build_context(current_user: Dict[str, Any]) -> str:
         logger.warning(f"Could not fetch tasks for voice context: {e}")
 
     try:
-        service = await build_calendar_service(user_id, cosmos_store)
-        result = service.events().list(
-            calendarId="primary",
-            timeMin=now.isoformat(),
-            maxResults=5,
-            singleEvents=True,
-            orderBy="startTime",
-        ).execute()
-        events = result.get("items", [])
+        user_email = current_user.get("email", "")
+        result = await arcade_call(
+            "GoogleCalendar.ListEvents",
+            user_email,
+            calendar_id="primary",
+            time_min=now.isoformat(),
+            max_results=5,
+        )
+        events = result if isinstance(result, list) else (result or {}).get("items", [])
         if events:
             event_lines = []
             for e in events:
