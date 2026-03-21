@@ -2,6 +2,14 @@
 {% block title %}Tyrone — Happy House{% endblock %}
 {% block page_title %}Tyrone{% endblock %}
 
+{% block header_actions %}
+<div class="flex items-center gap-2 text-sm text-slate-500">
+  <span id="hdr-time" class="font-medium text-slate-700 tabular-nums"></span>
+  <span class="text-slate-300">&bull;</span>
+  <span id="hdr-temp" class="text-slate-500">—</span>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-col items-center justify-center min-h-[60vh] select-none">
 
@@ -31,6 +39,35 @@
 {% block scripts %}
 <script>
 (function() {
+  // --- Clock ---
+  const timeEl = document.getElementById('hdr-time');
+  function updateClock() {
+    const now = new Date();
+    timeEl.textContent = now.toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', hour12: true,
+      timeZone: 'America/Los_Angeles'
+    });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // --- Weather ---
+  const tempEl = document.getElementById('hdr-temp');
+  async function loadWeather() {
+    try {
+      const res = await fetch('/voice/weather');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.temp != null) {
+        tempEl.textContent = `${data.temp}\u00b0F`;
+        tempEl.title = data.condition || '';
+      }
+    } catch(e) {}
+  }
+  loadWeather();
+  setInterval(loadWeather, 10 * 60 * 1000); // refresh every 10 min
+
+  // --- Voice assistant ---
   const STATE = { IDLE: 'idle', LISTENING: 'listening', PROCESSING: 'processing', SPEAKING: 'speaking' };
   let state = STATE.IDLE;
   let recognition = null;
@@ -65,9 +102,9 @@
     micIcon.classList.toggle('text-slate-300', s === STATE.IDLE);
     const labels = {
       [STATE.IDLE]: 'Click to start',
-      [STATE.LISTENING]: 'Listening…',
-      [STATE.PROCESSING]: 'Thinking…',
-      [STATE.SPEAKING]: 'Speaking…',
+      [STATE.LISTENING]: 'Listening\u2026',
+      [STATE.PROCESSING]: 'Thinking\u2026',
+      [STATE.SPEAKING]: 'Speaking\u2026',
     };
     statusText.textContent = labels[s];
   }
@@ -174,7 +211,7 @@
 
   window.toggleVoice = function() {
     if (!active) {
-      unlockAudio(); // Must be called during user gesture to allow audio playback
+      unlockAudio();
       active = true;
       recognition = setupRecognition();
       if (!recognition) { active = false; return; }

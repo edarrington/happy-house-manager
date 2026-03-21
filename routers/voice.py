@@ -65,7 +65,7 @@ async def _fetch_weather() -> str:
         wind = current.get("wind_speed_10m")
         code = current.get("weather_code", 0)
         condition = _weather_code_to_desc(code)
-        return f"Current weather: {condition}, {temp}°F, {humidity}% humidity, wind {wind} mph"
+        return f"Current weather: {condition}, {temp}\u00b0F, {humidity}% humidity, wind {wind} mph"
     except Exception as e:
         logger.warning(f"Could not fetch weather: {e}")
         return ""
@@ -222,6 +222,30 @@ async def voice_page(request: Request, current_user: Dict[str, Any] = Depends(ge
         "voice/index.html",
         {"request": request, "user": current_user, "active_page": "voice"},
     )
+
+
+@router.get("/weather", response_class=JSONResponse, include_in_schema=False)
+async def weather_endpoint(current_user: Dict[str, Any] = Depends(get_current_user)):
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={settings.weather_lat}&longitude={settings.weather_lon}"
+            f"&current=temperature_2m,weather_code"
+            f"&temperature_unit=fahrenheit"
+            f"&timezone=America%2FLos_Angeles"
+        )
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+        if resp.status_code != 200:
+            return JSONResponse({"error": "unavailable"}, status_code=503)
+        data = resp.json()
+        current = data.get("current", {})
+        temp = round(current.get("temperature_2m", 0))
+        code = current.get("weather_code", 0)
+        return JSONResponse({"temp": temp, "condition": _weather_code_to_desc(code)})
+    except Exception as e:
+        logger.warning(f"Weather endpoint error: {e}")
+        return JSONResponse({"error": "unavailable"}, status_code=503)
 
 
 @router.post("/chat", response_class=JSONResponse, include_in_schema=False)
