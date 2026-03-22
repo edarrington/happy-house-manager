@@ -30,8 +30,9 @@ Rules:
 - You know both Erick and Jewel. Refer to them by name when relevant.
 - ALWAYS use web_search before saying you don't know something. Never say "Not sure" or "I don't know" for factual questions without searching first.
 - Use web_search for recipes, news, weather, prices, sports scores, general knowledge — anything not in context.
-- If the user mentions a specific website (e.g. "from seriouseats.com" or "on that site"), pass the domain as the site parameter to web_search. Do NOT use fetch_page on a homepage.
-- Use fetch_page only when given a direct link to a specific page."""
+- If the user mentions a specific website (e.g. "from seriouseats.com"), pass that domain as the site parameter to web_search.
+- Use fetch_page only when given a direct link to a specific page — never on a homepage.
+- Recipe workflow: when asked to find a recipe and add ingredients, use web_search to find it, then fetch_page on the recipe URL to get the full ingredients list, then call create_shopping_list with all the ingredients at once. Always include the recipe URL in your final response."""
 
 TOOLS = [
     {
@@ -55,7 +56,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "create_todoist_task",
-            "description": "Add a new task to Todoist.",
+            "description": "Add a single task to Todoist.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -63,6 +64,25 @@ TOOLS = [
                     "due_string": {"type": "string", "description": "Due date in natural language, e.g. 'today', 'tomorrow', 'next Monday'"},
                 },
                 "required": ["content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_shopping_list",
+            "description": "Add multiple grocery or shopping items to Todoist at once. Use this when adding recipe ingredients or any list of items.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of items to add, e.g. [\"2 lbs chicken thighs\", \"1 cup yogurt\", \"garlic\"]",
+                    },
+                    "label": {"type": "string", "description": "Optional label prefix for all items, e.g. 'Chicken Tikka Masala'"},
+                },
+                "required": ["items"],
             },
         },
     },
@@ -103,7 +123,7 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "The search query"},
-                    "site": {"type": "string", "description": "Optional domain to restrict search to, e.g. 'allrecipes.com' or 'nytimes.com'"},
+                    "site": {"type": "string", "description": "Optional domain to restrict search to, e.g. 'seriouseats.com' or 'allrecipes.com'"},
                 },
                 "required": ["query"],
             },
@@ -113,11 +133,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "fetch_page",
-            "description": "Fetch and read the content of a specific URL. Use only when the user gives you a direct link to a specific page.",
+            "description": "Fetch and read the full content of a specific URL. Use to get recipe ingredients/instructions from a recipe page URL found via web_search.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {"type": "string", "description": "The full URL to fetch, e.g. https://example.com/specific-page"},
+                    "url": {"type": "string", "description": "The full URL of a specific page, e.g. https://www.seriouseats.com/chicken-tikka-masala"},
                 },
                 "required": ["url"],
             },
@@ -133,7 +153,7 @@ async def voice_chat(
     user_name: str,
     execute_tool: Optional[Callable] = None,
 ) -> str:
-    """Send a voice transcript to OpenAI with optional tool support."""
+    """Send a voice transcript to OpenAI with multi-step tool support."""
     if not settings.openai_api_key:
         return "OpenAI API key not configured."
 
@@ -146,57 +166,52 @@ async def voice_chat(
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": transcript})
 
-    payload: Dict[str, Any] = {
+    base_payload: Dict[str, Any] = {
         "model": "gpt-4o-mini",
-        "messages": messages,
-        "max_tokens": 200,
+        "tools": TOOLS if execute_tool else [],
+        "tool_choice": "auto",
     }
-    if execute_tool:
-        payload["tools"] = TOOLS
-        payload["tool_choice"] = "auto"
 
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                json=payload,
-            )
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Multi-round tool loop — up to 5 rounds
+            for round_num in range(5):
+                payload = {**base_payload, "messages": messages, "max_tokens": 300 if round_num == 0 else 200}
+                if not execute_tool:
+                    payload.pop("tools", None)
+                    payload.pop("tool_choice", None)
 
-        if resp.status_code != 200:
-            logger.error(f"OpenAI error {resp.status_code}: {resp.text}")
-            return "Give me a second \u2014 just hit a snag. Try again."
-
-        data = resp.json()
-        choice = data["choices"][0]
-        assistant_message = choice["message"]
-
-        # Handle tool calls
-        if choice["finish_reason"] == "tool_calls" and execute_tool:
-            messages.append(assistant_message)
-
-            for tool_call in assistant_message.get("tool_calls", []):
-                tool_name = tool_call["function"]["name"]
-                tool_args = json.loads(tool_call["function"]["arguments"])
-                logger.info(f"Tyrone calling tool: {tool_name} with {tool_args}")
-                tool_result = await execute_tool(tool_name, tool_args)
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "content": tool_result,
-                })
-
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp2 = await client.post(
+                resp = await client.post(
                     "https://api.openai.com/v1/chat/completions",
                     headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                    json={"model": "gpt-4o-mini", "messages": messages, "max_tokens": 150},
+                    json=payload,
                 )
-            if resp2.status_code == 200:
-                return resp2.json()["choices"][0]["message"]["content"]
-            return "Done."
 
-        return assistant_message.get("content", "")
+                if resp.status_code != 200:
+                    logger.error(f"OpenAI error {resp.status_code}: {resp.text}")
+                    return "Give me a second \u2014 just hit a snag. Try again."
+
+                data = resp.json()
+                choice = data["choices"][0]
+                assistant_message = choice["message"]
+
+                if choice["finish_reason"] != "tool_calls" or not execute_tool:
+                    return assistant_message.get("content", "")
+
+                # Execute tool calls
+                messages.append(assistant_message)
+                for tool_call in assistant_message.get("tool_calls", []):
+                    tool_name = tool_call["function"]["name"]
+                    tool_args = json.loads(tool_call["function"]["arguments"])
+                    logger.info(f"Tyrone tool [{round_num+1}]: {tool_name} {tool_args}")
+                    tool_result = await execute_tool(tool_name, tool_args)
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": tool_result,
+                    })
+
+        return "Done."
 
     except Exception as e:
         logger.error(f"OpenAI request failed: {e}")
