@@ -32,7 +32,8 @@ Rules:
 - Use web_search for recipes, news, weather, prices, sports scores, general knowledge — anything not in context.
 - If the user mentions a specific website (e.g. "from seriouseats.com"), pass that domain as the site parameter to web_search.
 - Use fetch_page only when given a direct link to a specific page — never on a homepage.
-- Recipe workflow: when asked to find a recipe and add ingredients, use web_search to find it, then fetch_page on the recipe URL to get the full ingredients list, then call create_shopping_list with all the ingredients at once. Always include the recipe URL in your final response."""
+- Shopping list rule: if the user asks to add anything to the shopping list, you MUST call create_shopping_list. Never say you added items without calling the tool first. Even if you know the recipe, you must still call the tool.
+- Recipe workflow: when asked for a recipe and to add ingredients to the shopping list — (1) call web_search to find the recipe, (2) call fetch_page on the recipe URL to get the full ingredient list, (3) call create_shopping_list with all ingredients. Always include the recipe URL in your reply."""
 
 TOOLS = [
     {
@@ -71,7 +72,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "create_shopping_list",
-            "description": "Add multiple grocery or shopping items to Todoist at once. Use this when adding recipe ingredients or any list of items.",
+            "description": "Add items to the household shopping list. MUST be called whenever the user asks to add anything to the shopping list — never skip this tool and claim items were added.",
             "parameters": {
                 "type": "object",
                 "properties": {
