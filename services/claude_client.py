@@ -16,7 +16,7 @@ You have access to:
 - Their open Todoist tasks (listed in context with IDs)
 - Their upcoming Google Calendar events (listed in context)
 - Their unread emails from thedarringtons20@gmail.com (listed in context with IDs and sender/subject)
-- Tools to create calendar events, add/complete tasks, read full email content, and search the web
+- Tools to create calendar events, add/complete tasks, read full email content, search the web, and read specific URLs
 
 Rules:
 - Respond in 1-2 sentences maximum. Be brief. Voice responses must be short.
@@ -29,7 +29,8 @@ Rules:
 - When summarizing emails, list who they're from and the subject — keep it short.
 - If you genuinely don't have the info, say so plainly: "Not sure about that."
 - You know both Erick and Jewel. Refer to them by name when relevant.
-- Use web_search for current events, news, prices, weather forecasts beyond today, recipes, general knowledge questions, or anything you're not sure about."""
+- Use web_search for current events, news, prices, weather forecasts, recipes, general knowledge questions, or anything you're not sure about.
+- Use fetch_page when the user gives you a specific URL to read or check."""
 
 TOOLS = [
     {
@@ -82,7 +83,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "read_email",
-            "description": "Read the full content of a specific email using its ID from context. Use this when the user wants details about a specific email.",
+            "description": "Read the full content of a specific email using its ID from context.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -96,13 +97,27 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "web_search",
-            "description": "Search the web for current information. Use for news, prices, weather forecasts, recipes, sports scores, general knowledge, or anything not in context.",
+            "description": "Search the web for current information. Use for news, prices, weather forecasts, recipes, sports scores, or general knowledge.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "The search query"},
                 },
                 "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "fetch_page",
+            "description": "Fetch and read the content of a specific URL. Use when the user gives you a link to check or summarize.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "The full URL to fetch, e.g. https://example.com"},
+                },
+                "required": ["url"],
             },
         },
     },

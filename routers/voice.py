@@ -90,7 +90,6 @@ async def _web_search(query: str) -> str:
             logger.warning(f"Tavily returned {resp.status_code}: {resp.text}")
             return "Search failed."
         data = resp.json()
-        # Prefer the pre-summarized answer; fall back to top result snippets
         if data.get("answer"):
             return data["answer"]
         results = data.get("results", [])
@@ -101,6 +100,33 @@ async def _web_search(query: str) -> str:
     except Exception as e:
         logger.error(f"Web search failed: {e}")
         return "Search failed."
+
+
+async def _fetch_page(url: str) -> str:
+    if not settings.tavily_api_key:
+        return "Web fetch is not configured."
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                "https://api.tavily.com/extract",
+                json={
+                    "api_key": settings.tavily_api_key,
+                    "urls": [url],
+                },
+            )
+        if resp.status_code != 200:
+            logger.warning(f"Tavily extract returned {resp.status_code}: {resp.text}")
+            return f"Couldn't fetch that page."
+        data = resp.json()
+        results = data.get("results", [])
+        if not results:
+            return "Nothing readable at that URL."
+        content = results[0].get("raw_content", "")
+        # Trim to a reasonable size for the LLM
+        return content[:3000] if content else "Page had no readable content."
+    except Exception as e:
+        logger.error(f"Page fetch failed: {e}")
+        return "Failed to fetch that page."
 
 
 async def _text_to_speech(text: str) -> str | None:
@@ -306,6 +332,8 @@ async def voice_chat_endpoint(
             return await _read_email(**args)
         if name == "web_search":
             return await _web_search(**args)
+        if name == "fetch_page":
+            return await _fetch_page(**args)
         return "Unknown tool."
 
     response_text = await voice_chat(transcript, history, context, user_name, execute_tool)
