@@ -11,100 +11,47 @@
 {% endblock %}
 
 {% block content %}
-<div style="display:grid; grid-template-columns:1fr 360px; gap:1.5rem; align-items:start;">
+<div class="flex flex-col items-center min-h-[70vh]">
 
-  <!-- Left: Tyrone voice + chat -->
-  <div class="flex flex-col items-center min-h-[70vh]">
+  <!-- Status + mic -->
+  <div class="flex flex-col items-center justify-center flex-1 select-none pt-8">
+    <p id="status-text" class="text-sm text-slate-400 mb-10 tracking-wide uppercase font-medium">
+      Click to start
+    </p>
 
-    <!-- Status + mic -->
-    <div class="flex flex-col items-center justify-center flex-1 select-none pt-8">
-      <p id="status-text" class="text-sm text-slate-400 mb-10 tracking-wide uppercase font-medium">
-        Click to start
-      </p>
+    <button id="mic-btn"
+      class="relative w-28 h-28 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center transition-all duration-300 hover:border-green-500 focus:outline-none"
+      onclick="toggleVoice()">
+      <span id="pulse-ring"
+        class="hidden absolute inset-0 rounded-full bg-green-500 opacity-20 animate-ping"></span>
+      <svg id="mic-icon" class="w-10 h-10 text-slate-300 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+      </svg>
+    </button>
 
-      <button id="mic-btn"
-        class="relative w-28 h-28 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center transition-all duration-300 hover:border-green-500 focus:outline-none"
-        onclick="toggleVoice()">
-        <span id="pulse-ring"
-          class="hidden absolute inset-0 rounded-full bg-green-500 opacity-20 animate-ping"></span>
-        <svg id="mic-icon" class="w-10 h-10 text-slate-300 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
-        </svg>
-      </button>
-
-      <p id="interim-text" class="mt-6 text-slate-500 text-sm italic min-h-5 max-w-sm text-center"></p>
-    </div>
-
-    <!-- Chat area -->
-    <div class="w-full max-w-lg mt-6">
-      <div id="conversation" class="space-y-3 min-h-[80px] max-h-64 overflow-y-auto mb-3 px-1"></div>
-
-      <!-- Text input -->
-      <form id="chat-form" onsubmit="submitText(event)"
-        class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2 shadow-sm">
-        <input id="chat-input" type="text" placeholder="Type a message&hellip;"
-          autocomplete="off"
-          class="flex-1 bg-transparent text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none" />
-        <button type="submit"
-          class="flex-shrink-0 w-8 h-8 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </button>
-      </form>
-    </div>
-
+    <p id="interim-text" class="mt-6 text-slate-500 text-sm italic min-h-5 max-w-sm text-center"></p>
   </div>
 
-  <!-- Right: Shopping list -->
-  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden sticky top-6">
+  <!-- Chat area -->
+  <div class="w-full max-w-lg mt-6">
+    <div id="conversation" class="space-y-3 min-h-[80px] max-h-64 overflow-y-auto mb-3 px-1"></div>
 
-    <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-      <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+    <!-- Text input -->
+    <form id="chat-form" onsubmit="submitText(event)"
+      class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2 shadow-sm">
+      <input id="chat-input" type="text" placeholder="Type a message&hellip;"
+        autocomplete="off"
+        class="flex-1 bg-transparent text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none" />
+      <button type="submit"
+        class="flex-shrink-0 w-8 h-8 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
-        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Shopping List</h2>
-      </div>
-      <button
-        class="text-xs text-slate-400 hover:text-red-400 transition-colors"
-        hx-delete="/voice/shopping"
-        hx-target="#shopping-list-body"
-        hx-swap="innerHTML"
-        title="Clear completed">
-        Clear done
       </button>
-    </div>
-
-    <!-- Manual add -->
-    <div class="px-3 pt-3 pb-2 border-b border-slate-100 dark:border-slate-700">
-      <form id="add-item-form" onsubmit="addShoppingItem(event)"
-        class="flex items-center gap-2">
-        <input id="add-item-input" type="text" placeholder="Add an item…" autocomplete="off"
-          class="flex-1 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-green-500" />
-        <button type="submit"
-          class="w-7 h-7 bg-green-500 hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-          </svg>
-        </button>
-      </form>
-    </div>
-
-    <!-- Items -->
-    <div id="shopping-list-body"
-      class="px-1 py-1 max-h-[60vh] overflow-y-auto"
-      hx-get="/voice/shopping"
-      hx-trigger="load"
-      hx-swap="innerHTML">
-      <p class="text-slate-400 text-sm text-center py-6">Loading…</p>
-    </div>
-
+    </form>
   </div>
 
 </div>
@@ -140,28 +87,6 @@
   }
   loadWeather();
   setInterval(loadWeather, 10 * 60 * 1000);
-
-  // --- Reload shopping list after Tyrone responds ---
-  window.reloadShoppingList = function() {
-    htmx.trigger('#shopping-list-body', 'load');
-  };
-
-  // --- Manual add item ---
-  window.addShoppingItem = async function(e) {
-    e.preventDefault();
-    const input = document.getElementById('add-item-input');
-    const content = input.value.trim();
-    if (!content) return;
-    input.value = '';
-    const res = await fetch('/voice/shopping/item', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
-    if (res.ok) {
-      document.getElementById('shopping-list-body').innerHTML = await res.text();
-    }
-  };
 
   // --- Voice assistant ---
   const STATE = { IDLE: 'idle', LISTENING: 'listening', PROCESSING: 'processing', SPEAKING: 'speaking' };
@@ -286,8 +211,6 @@
         history.push({ role: 'assistant', content: reply });
         if (history.length > 20) history = history.slice(-20);
         addMessage('assistant', reply);
-        // Refresh shopping list in case Tyrone added items
-        reloadShoppingList();
         if (!skipAudio && data.audio_b64 && audioCtx) {
           await playAudio(data.audio_b64);
         } else {
