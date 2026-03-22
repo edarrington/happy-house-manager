@@ -4,7 +4,7 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block header_actions %}
-  <span class="text-sm text-slate-500">Welcome back, {{ user.given_name or user.name }}!</span>
+  <span class="text-sm text-slate-500 dark:text-slate-400">Welcome back, {{ user.given_name or user.name }}!</span>
 {% endblock %}
 
 {% block content %}
@@ -14,85 +14,85 @@
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
 
     <!-- Gmail -->
-    <a href="/gmail" class="group block bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-green-300 transition-all">
+    <a href="/gmail" class="group block bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all">
       <div class="flex items-start justify-between mb-4">
-        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
-          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
+          <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <svg class="w-4 h-4 text-slate-300 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      <h3 class="font-semibold text-slate-800 text-sm mb-1">Gmail</h3>
-      <p class="text-slate-500 text-xs">Read and send emails</p>
+      <h3 class="font-semibold text-slate-800 dark:text-white text-sm mb-1">Gmail</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-xs">Read and send emails</p>
     </a>
 
     <!-- Drive -->
-    <a href="/drive" class="group block bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-green-300 transition-all">
+    <a href="/drive" class="group block bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all">
       <div class="flex items-start justify-between mb-4">
-        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+          <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
         </div>
-        <svg class="w-4 h-4 text-slate-300 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      <h3 class="font-semibold text-slate-800 text-sm mb-1">Drive</h3>
-      <p class="text-slate-500 text-xs">Browse and upload files</p>
+      <h3 class="font-semibold text-slate-800 dark:text-white text-sm mb-1">Drive</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-xs">Browse and upload files</p>
     </a>
 
     <!-- Calendar -->
-    <a href="/calendar" class="group block bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-green-300 transition-all">
+    <a href="/calendar" class="group block bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all">
       <div class="flex items-start justify-between mb-4">
-        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-          <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
+          <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
-        <svg class="w-4 h-4 text-slate-300 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      <h3 class="font-semibold text-slate-800 text-sm mb-1">Calendar</h3>
-      <p class="text-slate-500 text-xs">Upcoming events</p>
+      <h3 class="font-semibold text-slate-800 dark:text-white text-sm mb-1">Calendar</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-xs">Upcoming events</p>
     </a>
 
     <!-- Tasks -->
-    <a href="/tasks" class="group block bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-green-300 transition-all">
+    <a href="/tasks" class="group block bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all">
       <div class="flex items-start justify-between mb-4">
-        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
         </div>
-        <svg class="w-4 h-4 text-slate-300 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      <h3 class="font-semibold text-slate-800 text-sm mb-1">Tasks</h3>
-      <p class="text-slate-500 text-xs">Todoist projects and tasks</p>
+      <h3 class="font-semibold text-slate-800 dark:text-white text-sm mb-1">Tasks</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-xs">Todoist projects and tasks</p>
     </a>
 
   </div>
 
   <!-- Info banner -->
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <h2 class="text-slate-800 font-semibold mb-2">Getting Started</h2>
-    <p class="text-slate-600 text-sm leading-relaxed">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <h2 class="text-slate-800 dark:text-white font-semibold mb-2">Getting Started</h2>
+    <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
       Welcome to Happy House Manager &mdash; your family's private hub for Gmail, Google Drive, Calendar, and Todoist.
       Use the sidebar to navigate between sections. Click any integration card above to jump right in.
     </p>
     <div class="mt-4 flex flex-wrap gap-2">
       <a href="/gmail"
-         class="inline-flex items-center gap-1.5 text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded-full transition-colors">
+         class="inline-flex items-center gap-1.5 text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 px-3 py-1.5 rounded-full transition-colors">
         Open Gmail
       </a>
       <a href="/auth/switch"
-         class="inline-flex items-center gap-1.5 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-1.5 rounded-full transition-colors">
+         class="inline-flex items-center gap-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors">
         Switch User
       </a>
     </div>

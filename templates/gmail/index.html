@@ -19,31 +19,27 @@
 {% block content %}
 <div class="max-w-4xl">
 
-  <!-- Modal container (HTMX injects compose form here) -->
   <div id="modal-container"></div>
-
-  <!-- Message detail panel -->
   <div id="message-panel"></div>
 
   {% if error %}
-    <div class="mb-4 rounded-xl bg-red-50 border border-red-200 px-5 py-4 text-sm text-red-700">
+    <div class="mb-4 rounded-xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 px-5 py-4 text-sm text-red-700 dark:text-red-400">
       {{ error }}
     </div>
   {% endif %}
 
-  <!-- Messages list -->
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-slate-700">Inbox</h2>
-      <span class="text-xs text-slate-400">{{ messages|length }} messages</span>
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Inbox</h2>
+      <span class="text-xs text-slate-400 dark:text-slate-500">{{ messages|length }} messages</span>
     </div>
 
     {% if messages %}
-      <ul class="divide-y divide-slate-100">
+      <ul class="divide-y divide-slate-100 dark:divide-slate-700">
         {% for msg in messages %}
           <li>
             <button
-              class="w-full text-left px-5 py-3.5 hover:bg-slate-50 transition-colors block"
+              class="w-full text-left px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors block"
               hx-get="/gmail/message/{{ msg.id }}"
               hx-target="#message-panel"
               hx-swap="innerHTML"
@@ -58,15 +54,15 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-sm {% if msg.unread %}font-semibold text-slate-900{% else %}font-medium text-slate-700{% endif %} truncate">
+                    <span class="text-sm {% if msg.unread %}font-semibold text-slate-900 dark:text-white{% else %}font-medium text-slate-700 dark:text-slate-300{% endif %} truncate">
                       {{ msg.from | truncate(40) }}
                     </span>
-                    <span class="text-xs text-slate-400 flex-shrink-0">{{ msg.date | truncate(20, end='') }}</span>
+                    <span class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{{ msg.date | truncate(20, end='') }}</span>
                   </div>
-                  <p class="text-sm {% if msg.unread %}font-medium text-slate-800{% else %}text-slate-600{% endif %} truncate mt-0.5">
+                  <p class="text-sm {% if msg.unread %}font-medium text-slate-800 dark:text-slate-200{% else %}text-slate-600 dark:text-slate-400{% endif %} truncate mt-0.5">
                     {{ msg.subject }}
                   </p>
-                  <p class="text-xs text-slate-400 truncate mt-0.5">{{ msg.snippet }}</p>
+                  <p class="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{{ msg.snippet }}</p>
                 </div>
               </div>
             </button>
@@ -75,10 +71,10 @@
       </ul>
     {% else %}
       <div class="px-5 py-12 text-center">
-        <svg class="w-10 h-10 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-        <p class="text-sm text-slate-500">No messages found.</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">No messages found.</p>
       </div>
     {% endif %}
   </div>

@@ -3,10 +3,10 @@
 {% block page_title %}Tyrone{% endblock %}
 
 {% block header_actions %}
-<div class="flex items-center gap-2 text-sm text-slate-500">
-  <span id="hdr-time" class="font-medium text-slate-700 tabular-nums"></span>
-  <span class="text-slate-300">&bull;</span>
-  <span id="hdr-temp" class="text-slate-500">—</span>
+<div class="flex items-center gap-2 text-sm">
+  <span id="hdr-time" class="font-medium text-slate-700 dark:text-slate-200 tabular-nums"></span>
+  <span class="text-slate-300 dark:text-slate-600">&bull;</span>
+  <span id="hdr-temp" class="text-slate-500 dark:text-slate-400">—</span>
 </div>
 {% endblock %}
 
@@ -41,10 +41,10 @@
 
     <!-- Text input -->
     <form id="chat-form" onsubmit="submitText(event)"
-      class="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
+      class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2 shadow-sm">
       <input id="chat-input" type="text" placeholder="Type a message&hellip;"
         autocomplete="off"
-        class="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none" />
+        class="flex-1 bg-transparent text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none" />
       <button type="submit"
         class="flex-shrink-0 w-8 h-8 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors">
         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,9 +213,6 @@
         addMessage('assistant', reply);
         if (!skipAudio && data.audio_b64 && audioCtx) {
           await playAudio(data.audio_b64);
-        } else if (!skipAudio && data.audio_b64) {
-          // text-only typed message — don't play audio, just show reply
-          setState(STATE.IDLE);
         } else {
           setState(STATE.IDLE);
           if (active) restartListening();
@@ -235,7 +232,7 @@
     e.preventDefault();
     const text = chatInput.value.trim();
     if (!text) return;
-    sendToTyrone(text, true); // skipAudio=true for typed messages
+    sendToTyrone(text, true);
   };
 
   window.toggleVoice = function() {
