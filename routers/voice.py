@@ -1,9 +1,9 @@
 """Voice assistant router — Tyrone with tool support and OpenAI TTS."""
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Request, Form
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 import base64
 import httpx
@@ -241,27 +241,38 @@ async def _create_todoist_task(current_user: Dict, content: str, due_string: str
 
 
 async def _create_shopping_list(current_user: Dict, items: List[str], label: str = "") -> str:
+    import asyncio
+    user_id = current_user["sub"]
+    results = []
+
+    # Always save to in-app shopping list
     try:
-        user_doc = await cosmos_store.get_user(current_user["sub"])
-        token = user_doc.get("todoist_token") if user_doc else None
-        if not token:
-            return "Todoist not connected."
-        import asyncio
-        async def _add(item: str) -> bool:
-            content = f"[{label}] {item}" if label else item
-            async with httpx.AsyncClient(timeout=10.0) as c:
-                r = await c.post(
-                    "https://api.todoist.com/api/v1/tasks",
-                    headers={"Authorization": f"Bearer {token}"},
-                    json={"content": content},
-                )
-            return r.status_code in (200, 201)
-        results = await asyncio.gather(*[_add(i) for i in items], return_exceptions=True)
-        added = sum(1 for r in results if r is True)
-        return f"Added {added} of {len(items)} items to Todoist."
+        await cosmos_store.add_shopping_items(user_id, items, label=label)
     except Exception as e:
-        logger.error(f"Shopping list create failed: {e}")
-        return f"Failed to add shopping list: {e}"
+        logger.error(f"Shopping list Cosmos save failed: {e}")
+
+    # Also sync to Todoist if connected
+    try:
+        user_doc = await cosmos_store.get_user(user_id)
+        token = user_doc.get("todoist_token") if user_doc else None
+        if token:
+            async def _add(item: str) -> bool:
+                content = f"[{label}] {item}" if label else item
+                async with httpx.AsyncClient(timeout=10.0) as c:
+                    r = await c.post(
+                        "https://api.todoist.com/api/v1/tasks",
+                        headers={"Authorization": f"Bearer {token}"},
+                        json={"content": content},
+                    )
+                return r.status_code in (200, 201)
+            results = await asyncio.gather(*[_add(i) for i in items], return_exceptions=True)
+    except Exception as e:
+        logger.error(f"Todoist sync failed: {e}")
+
+    added = sum(1 for r in results if r is True)
+    if added:
+        return f"Added {len(items)} items to your shopping list and {added} to Todoist."
+    return f"Added {len(items)} items to your shopping list."
 
 
 async def _complete_todoist_task(current_user: Dict, task_id: str) -> str:
@@ -364,3 +375,96 @@ async def voice_chat_endpoint(
     response_text = await voice_chat(transcript, history, context, user_name, execute_tool)
     audio_b64 = await _text_to_speech(response_text) if response_text else None
     return JSONResponse({"response": response_text, "audio_b64": audio_b64})
+
+
+# ---------------------------------------------------------------------------
+# Shopping list routes
+# ---------------------------------------------------------------------------
+
+def _render_shopping_list(items: list) -> str:
+    """Return HTML for the shopping list items partial."""
+    if not items:
+        return '<p class="text-slate-400 dark:text-slate-500 text-sm text-center py-6">No items yet — ask Tyrone to add some!</p>'
+    rows = []
+    # Group by label
+    labeled = {}
+    for item in items:
+        lbl = item.get("label") or ""
+        labeled.setdefault(lbl, []).append(item)
+    for lbl, group in labeled.items():
+        if lbl:
+            rows.append(f'<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-3 mb-1 px-1">{lbl}</p>')
+        for item in group:
+            checked = item["completed"]
+            row = f'''
+<div id="sli-{item["id"]}" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 group">
+  <input type="checkbox" {"checked" if checked else ""}
+    class="w-4 h-4 rounded accent-green-500 cursor-pointer flex-shrink-0"
+    hx-patch="/voice/shopping/{item["id"]}/toggle"
+    hx-target="#shopping-list-body"
+    hx-swap="innerHTML" />
+  <span class="flex-1 text-sm {"line-through text-slate-400 dark:text-slate-500" if checked else "text-slate-700 dark:text-slate-200"}">{item["content"]}</span>
+  <button
+    class="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-red-400"
+    hx-delete="/voice/shopping/{item["id"]}"
+    hx-target="#shopping-list-body"
+    hx-swap="innerHTML"
+    hx-confirm="">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+</div>'''
+            rows.append(row)
+    return "\n".join(rows)
+
+
+@router.get("/shopping", response_class=HTMLResponse, include_in_schema=False)
+async def shopping_list_page(
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    items = await cosmos_store.get_shopping_list(current_user["sub"])
+    return HTMLResponse(_render_shopping_list(items))
+
+
+@router.post("/shopping/item", response_class=HTMLResponse, include_in_schema=False)
+async def shopping_add_item(
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    if content:
+        await cosmos_store.add_shopping_items(current_user["sub"], [content])
+    items = await cosmos_store.get_shopping_list(current_user["sub"])
+    return HTMLResponse(_render_shopping_list(items))
+
+
+@router.patch("/shopping/{item_id}/toggle", response_class=HTMLResponse, include_in_schema=False)
+async def shopping_toggle(
+    item_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    await cosmos_store.toggle_shopping_item(current_user["sub"], item_id)
+    items = await cosmos_store.get_shopping_list(current_user["sub"])
+    return HTMLResponse(_render_shopping_list(items))
+
+
+@router.delete("/shopping/{item_id}", response_class=HTMLResponse, include_in_schema=False)
+async def shopping_delete(
+    item_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    await cosmos_store.delete_shopping_item(current_user["sub"], item_id)
+    items = await cosmos_store.get_shopping_list(current_user["sub"])
+    return HTMLResponse(_render_shopping_list(items))
+
+
+@router.delete("/shopping", response_class=HTMLResponse, include_in_schema=False)
+async def shopping_clear_completed(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    await cosmos_store.clear_completed_shopping(current_user["sub"])
+    items = await cosmos_store.get_shopping_list(current_user["sub"])
+    return HTMLResponse(_render_shopping_list(items))
