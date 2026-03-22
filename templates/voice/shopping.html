@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Shopping List — Happy House{% endblock %}
+{% block page_title %}Shopping List{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+
+  <!-- Add item form -->
+  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm px-4 py-3 mb-4">
+    <form id="add-item-form" onsubmit="addShoppingItem(event)" class="flex items-center gap-3">
+      <input id="add-item-input" type="text" placeholder="Add an item…" autocomplete="off"
+        class="flex-1 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-green-500" />
+      <button type="submit"
+        class="flex-shrink-0 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors">
+        Add
+      </button>
+    </form>
+  </div>
+
+  <!-- List card -->
+  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+      <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Items</span>
+      <button
+        class="text-xs text-slate-400 hover:text-red-400 transition-colors"
+        hx-delete="/voice/shopping"
+        hx-target="#shopping-list-body"
+        hx-swap="innerHTML"
+        title="Clear completed items">
+        Clear completed
+      </button>
+    </div>
+
+    <!-- Items (HTMX-managed) -->
+    <div id="shopping-list-body"
+      class="px-1 py-1 min-h-[200px]"
+      hx-get="/voice/shopping"
+      hx-trigger="load"
+      hx-swap="innerHTML">
+      <p class="text-slate-400 text-sm text-center py-8">Loading…</p>
+    </div>
+
+  </div>
+
+  <p class="text-xs text-slate-400 dark:text-slate-500 text-center mt-4">
+    Ask Tyrone to add items — they'll appear here automatically.
+  </p>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.addShoppingItem = async function(e) {
+  e.preventDefault();
+  const input = document.getElementById('add-item-input');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  const res = await fetch('/voice/shopping/item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (res.ok) {
+    document.getElementById('shopping-list-body').innerHTML = await res.text();
+  }
+};
+</script>
+{% endblock %}
