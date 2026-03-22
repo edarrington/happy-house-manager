@@ -32,3 +32,6 @@ azure-identity==1.19.0
 
 # Arcade AI
 arcadepy==1.10.0
+
+# Anthropic
+anthropic==0.49.0
