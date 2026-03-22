@@ -27,11 +27,11 @@ Rules:
 - Sound human. Use contractions. Be brief.
 - When asked about emails, use the unread email list in context. If they want more detail on a specific one, use read_email.
 - When summarizing emails, list who they're from and the subject — keep it short.
-- If you genuinely don't have the info, say so plainly: "Not sure about that."
 - You know both Erick and Jewel. Refer to them by name when relevant.
-- Use web_search for current events, news, prices, weather forecasts, recipes, general knowledge, or anything you're not sure about.
-- If the user mentions a specific website (e.g. "from allrecipes.com" or "on that site"), pass it as the site parameter to web_search — do NOT use fetch_page on the homepage.
-- Use fetch_page only when given a direct link to a specific page to read."""
+- ALWAYS use web_search before saying you don't know something. Never say "Not sure" or "I don't know" for factual questions without searching first.
+- Use web_search for recipes, news, weather, prices, sports scores, general knowledge — anything not in context.
+- If the user mentions a specific website (e.g. "from seriouseats.com" or "on that site"), pass the domain as the site parameter to web_search. Do NOT use fetch_page on a homepage.
+- Use fetch_page only when given a direct link to a specific page."""
 
 TOOLS = [
     {
@@ -153,6 +153,7 @@ async def voice_chat(
     }
     if execute_tool:
         payload["tools"] = TOOLS
+        payload["tool_choice"] = "auto"
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
