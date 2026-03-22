@@ -71,21 +71,24 @@ async def _fetch_weather() -> str:
         return ""
 
 
-async def _web_search(query: str) -> str:
+async def _web_search(query: str, site: str = "") -> str:
     if not settings.tavily_api_key:
         return "Web search is not configured."
     try:
+        payload: Dict[str, Any] = {
+            "api_key": settings.tavily_api_key,
+            "query": query,
+            "search_depth": "basic",
+            "max_results": 3,
+            "include_answer": True,
+        }
+        if site:
+            # Strip protocol if user included it
+            domain = site.replace("https://", "").replace("http://", "").split("/")[0]
+            payload["include_domains"] = [domain]
+            logger.info(f"Web search restricted to domain: {domain}")
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                "https://api.tavily.com/search",
-                json={
-                    "api_key": settings.tavily_api_key,
-                    "query": query,
-                    "search_depth": "basic",
-                    "max_results": 3,
-                    "include_answer": True,
-                },
-            )
+            resp = await client.post("https://api.tavily.com/search", json=payload)
         if resp.status_code != 200:
             logger.warning(f"Tavily returned {resp.status_code}: {resp.text}")
             return "Search failed."
@@ -109,20 +112,16 @@ async def _fetch_page(url: str) -> str:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
                 "https://api.tavily.com/extract",
-                json={
-                    "api_key": settings.tavily_api_key,
-                    "urls": [url],
-                },
+                json={"api_key": settings.tavily_api_key, "urls": [url]},
             )
         if resp.status_code != 200:
             logger.warning(f"Tavily extract returned {resp.status_code}: {resp.text}")
-            return f"Couldn't fetch that page."
+            return "Couldn't fetch that page."
         data = resp.json()
         results = data.get("results", [])
         if not results:
             return "Nothing readable at that URL."
         content = results[0].get("raw_content", "")
-        # Trim to a reasonable size for the LLM
         return content[:3000] if content else "Page had no readable content."
     except Exception as e:
         logger.error(f"Page fetch failed: {e}")

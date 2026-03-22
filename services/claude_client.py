@@ -29,8 +29,9 @@ Rules:
 - When summarizing emails, list who they're from and the subject — keep it short.
 - If you genuinely don't have the info, say so plainly: "Not sure about that."
 - You know both Erick and Jewel. Refer to them by name when relevant.
-- Use web_search for current events, news, prices, weather forecasts, recipes, general knowledge questions, or anything you're not sure about.
-- Use fetch_page when the user gives you a specific URL to read or check."""
+- Use web_search for current events, news, prices, weather forecasts, recipes, general knowledge, or anything you're not sure about.
+- If the user mentions a specific website (e.g. "from allrecipes.com" or "on that site"), pass it as the site parameter to web_search — do NOT use fetch_page on the homepage.
+- Use fetch_page only when given a direct link to a specific page to read."""
 
 TOOLS = [
     {
@@ -97,11 +98,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "web_search",
-            "description": "Search the web for current information. Use for news, prices, weather forecasts, recipes, sports scores, or general knowledge.",
+            "description": "Search the web for current information. Use for news, prices, weather, recipes, sports, or general knowledge. If the user mentions a specific website, pass it as 'site' to search within that domain.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "The search query"},
+                    "site": {"type": "string", "description": "Optional domain to restrict search to, e.g. 'allrecipes.com' or 'nytimes.com'"},
                 },
                 "required": ["query"],
             },
@@ -111,11 +113,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "fetch_page",
-            "description": "Fetch and read the content of a specific URL. Use when the user gives you a link to check or summarize.",
+            "description": "Fetch and read the content of a specific URL. Use only when the user gives you a direct link to a specific page.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {"type": "string", "description": "The full URL to fetch, e.g. https://example.com"},
+                    "url": {"type": "string", "description": "The full URL to fetch, e.g. https://example.com/specific-page"},
                 },
                 "required": ["url"],
             },
