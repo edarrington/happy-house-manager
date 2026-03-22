@@ -105,6 +105,70 @@ class CosmosUserStore:
             logger.error(f"Error fetching Gmail credentials: {e}")
             return None
 
+    # ------------------------------------------------------------------
+    # Shopping list — stored as user_doc["shopping_list"] list of dicts
+    # ------------------------------------------------------------------
+
+    async def get_shopping_list(self, user_id: str) -> list:
+        user_doc = await self.get_user(user_id)
+        return user_doc.get("shopping_list", []) if user_doc else []
+
+    async def add_shopping_items(self, user_id: str, items: list, label: str = "") -> list:
+        """Append items to the user's shopping list. Returns the new item dicts."""
+        import uuid
+        from datetime import datetime, timezone
+        user_doc = await self.get_user(user_id)
+        if not user_doc:
+            return []
+        shopping_list = user_doc.get("shopping_list", [])
+        new_items = []
+        for content in items:
+            item = {
+                "id": str(uuid.uuid4()),
+                "content": content,
+                "label": label,
+                "completed": False,
+                "added_at": datetime.now(timezone.utc).isoformat(),
+            }
+            shopping_list.append(item)
+            new_items.append(item)
+        user_doc["shopping_list"] = shopping_list
+        await self.upsert_user(user_doc)
+        return new_items
+
+    async def toggle_shopping_item(self, user_id: str, item_id: str) -> bool:
+        user_doc = await self.get_user(user_id)
+        if not user_doc:
+            return False
+        for item in user_doc.get("shopping_list", []):
+            if item["id"] == item_id:
+                item["completed"] = not item["completed"]
+                await self.upsert_user(user_doc)
+                return True
+        return False
+
+    async def delete_shopping_item(self, user_id: str, item_id: str) -> bool:
+        user_doc = await self.get_user(user_id)
+        if not user_doc:
+            return False
+        orig = user_doc.get("shopping_list", [])
+        user_doc["shopping_list"] = [i for i in orig if i["id"] != item_id]
+        if len(user_doc["shopping_list"]) < len(orig):
+            await self.upsert_user(user_doc)
+            return True
+        return False
+
+    async def clear_completed_shopping(self, user_id: str) -> int:
+        user_doc = await self.get_user(user_id)
+        if not user_doc:
+            return 0
+        orig = user_doc.get("shopping_list", [])
+        user_doc["shopping_list"] = [i for i in orig if not i["completed"]]
+        count = len(orig) - len(user_doc["shopping_list"])
+        if count:
+            await self.upsert_user(user_doc)
+        return count
+
     async def update_gmail_refresh_token(self, new_refresh_token: str) -> None:
         """Persist a rotated Gmail refresh token back to Cosmos DB."""
         try:
