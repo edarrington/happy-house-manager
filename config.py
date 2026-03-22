@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Arcade AI
     arcade_api_key: str = ""
 
+    # Tavily web search
+    tavily_api_key: str = ""
+
     # Weather (Open-Meteo, no API key required)
     weather_lat: float = 34.0522  # Los Angeles default
     weather_lon: float = -118.2437

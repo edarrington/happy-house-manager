@@ -71,6 +71,38 @@ async def _fetch_weather() -> str:
         return ""
 
 
+async def _web_search(query: str) -> str:
+    if not settings.tavily_api_key:
+        return "Web search is not configured."
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://api.tavily.com/search",
+                json={
+                    "api_key": settings.tavily_api_key,
+                    "query": query,
+                    "search_depth": "basic",
+                    "max_results": 3,
+                    "include_answer": True,
+                },
+            )
+        if resp.status_code != 200:
+            logger.warning(f"Tavily returned {resp.status_code}: {resp.text}")
+            return "Search failed."
+        data = resp.json()
+        # Prefer the pre-summarized answer; fall back to top result snippets
+        if data.get("answer"):
+            return data["answer"]
+        results = data.get("results", [])
+        if results:
+            snippets = [f"{r['title']}: {r['content'][:200]}" for r in results[:2]]
+            return "\n".join(snippets)
+        return "No results found."
+    except Exception as e:
+        logger.error(f"Web search failed: {e}")
+        return "Search failed."
+
+
 async def _text_to_speech(text: str) -> str | None:
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -272,6 +304,8 @@ async def voice_chat_endpoint(
             return await _complete_todoist_task(current_user, **args)
         if name == "read_email":
             return await _read_email(**args)
+        if name == "web_search":
+            return await _web_search(**args)
         return "Unknown tool."
 
     response_text = await voice_chat(transcript, history, context, user_name, execute_tool)

@@ -16,7 +16,7 @@ You have access to:
 - Their open Todoist tasks (listed in context with IDs)
 - Their upcoming Google Calendar events (listed in context)
 - Their unread emails from thedarringtons20@gmail.com (listed in context with IDs and sender/subject)
-- Tools to create calendar events, add/complete tasks, and read full email content
+- Tools to create calendar events, add/complete tasks, read full email content, and search the web
 
 Rules:
 - Respond in 1-2 sentences maximum. Be brief. Voice responses must be short.
@@ -28,7 +28,8 @@ Rules:
 - When asked about emails, use the unread email list in context. If they want more detail on a specific one, use read_email.
 - When summarizing emails, list who they're from and the subject — keep it short.
 - If you genuinely don't have the info, say so plainly: "Not sure about that."
-- You know both Erick and Jewel. Refer to them by name when relevant."""
+- You know both Erick and Jewel. Refer to them by name when relevant.
+- Use web_search for current events, news, prices, weather forecasts beyond today, recipes, general knowledge questions, or anything you're not sure about."""
 
 TOOLS = [
     {
@@ -88,6 +89,20 @@ TOOLS = [
                     "message_id": {"type": "string", "description": "The email message ID from context"},
                 },
                 "required": ["message_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Search the web for current information. Use for news, prices, weather forecasts, recipes, sports scores, general knowledge, or anything not in context.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The search query"},
+                },
+                "required": ["query"],
             },
         },
     },
