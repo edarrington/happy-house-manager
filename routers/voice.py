@@ -340,6 +340,18 @@ async def weather_endpoint(current_user: Dict[str, Any] = Depends(get_current_us
         return JSONResponse({"error": "unavailable"}, status_code=503)
 
 
+@router.get("/shopping-list", include_in_schema=False)
+async def shopping_list_page_full(
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    items = await cosmos_store.get_shopping_list(current_user["sub"])
+    return templates.TemplateResponse(
+        "voice/shopping.html",
+        {"request": request, "user": current_user, "active_page": "shopping", "items": items},
+    )
+
+
 @router.post("/chat", response_class=JSONResponse, include_in_schema=False)
 async def voice_chat_endpoint(
     request: Request,
