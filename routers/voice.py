@@ -240,6 +240,30 @@ async def _create_todoist_task(current_user: Dict, content: str, due_string: str
         return f"Failed to add task: {e}"
 
 
+async def _create_shopping_list(current_user: Dict, items: List[str], label: str = "") -> str:
+    try:
+        user_doc = await cosmos_store.get_user(current_user["sub"])
+        token = user_doc.get("todoist_token") if user_doc else None
+        if not token:
+            return "Todoist not connected."
+        import asyncio
+        async def _add(item: str) -> bool:
+            content = f"[{label}] {item}" if label else item
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                r = await c.post(
+                    "https://api.todoist.com/api/v1/tasks",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"content": content},
+                )
+            return r.status_code in (200, 201)
+        results = await asyncio.gather(*[_add(i) for i in items], return_exceptions=True)
+        added = sum(1 for r in results if r is True)
+        return f"Added {added} of {len(items)} items to Todoist."
+    except Exception as e:
+        logger.error(f"Shopping list create failed: {e}")
+        return f"Failed to add shopping list: {e}"
+
+
 async def _complete_todoist_task(current_user: Dict, task_id: str) -> str:
     try:
         user_doc = await cosmos_store.get_user(current_user["sub"])
@@ -325,6 +349,8 @@ async def voice_chat_endpoint(
             return await _create_calendar_event(current_user, **args)
         if name == "create_todoist_task":
             return await _create_todoist_task(current_user, **args)
+        if name == "create_shopping_list":
+            return await _create_shopping_list(current_user, **args)
         if name == "complete_todoist_task":
             return await _complete_todoist_task(current_user, **args)
         if name == "read_email":
