@@ -147,6 +147,14 @@ TOOLS = [
 ]
 
 
+_SHOPPING_KEYWORDS = {"shopping list", "shopping", "grocery", "groceries", "add to my list", "add to the list"}
+
+
+def _wants_shopping_list(transcript: str) -> bool:
+    t = transcript.lower()
+    return any(kw in t for kw in _SHOPPING_KEYWORDS)
+
+
 async def voice_chat(
     transcript: str,
     history: List[Dict[str, str]],
@@ -162,25 +170,33 @@ async def voice_chat(
     if context:
         system += f"\n\nCurrent context for {user_name}:\n{context}"
 
+    # If user wants shopping list, inject a stronger reminder
+    shopping_request = _wants_shopping_list(transcript) and execute_tool is not None
+    if shopping_request:
+        system += "\n\nIMPORTANT: This request involves the shopping list. You MUST call create_shopping_list before giving your final response. Do not skip it."
+
     messages = [{"role": "system", "content": system}]
     for msg in history[-6:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": transcript})
 
-    base_payload: Dict[str, Any] = {
-        "model": "gpt-4o-mini",
-        "tools": TOOLS if execute_tool else [],
-        "tool_choice": "auto",
-    }
+    # Force tool use on shopping requests so the model can't skip straight to a text reply
+    first_tool_choice = "required" if shopping_request else "auto"
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # Multi-round tool loop — up to 5 rounds
-            for round_num in range(5):
-                payload = {**base_payload, "messages": messages, "max_tokens": 300 if round_num == 0 else 200}
-                if not execute_tool:
-                    payload.pop("tools", None)
-                    payload.pop("tool_choice", None)
+            tool_choice = first_tool_choice
+            shopping_list_called = False
+
+            for round_num in range(6):
+                payload: Dict[str, Any] = {
+                    "model": "gpt-4o-mini",
+                    "messages": messages,
+                    "max_tokens": 300 if round_num == 0 else 200,
+                }
+                if execute_tool:
+                    payload["tools"] = TOOLS
+                    payload["tool_choice"] = tool_choice
 
                 resp = await client.post(
                     "https://api.openai.com/v1/chat/completions",
@@ -197,6 +213,36 @@ async def voice_chat(
                 assistant_message = choice["message"]
 
                 if choice["finish_reason"] != "tool_calls" or not execute_tool:
+                    # If shopping was requested but create_shopping_list was never called,
+                    # force one more round with it required
+                    if shopping_request and not shopping_list_called:
+                        logger.warning("Shopping list tool was not called — forcing it")
+                        messages.append(assistant_message)
+                        messages.append({
+                            "role": "user",
+                            "content": "Wait — you haven't added the items to the shopping list yet. Please call create_shopping_list now with the ingredients.",
+                        })
+                        payload2: Dict[str, Any] = {
+                            "model": "gpt-4o-mini",
+                            "messages": messages,
+                            "max_tokens": 300,
+                            "tools": TOOLS,
+                            "tool_choice": {"type": "function", "function": {"name": "create_shopping_list"}},
+                        }
+                        resp2 = await client.post(
+                            "https://api.openai.com/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                            json=payload2,
+                        )
+                        if resp2.status_code == 200:
+                            d2 = resp2.json()
+                            am2 = d2["choices"][0]["message"]
+                            messages.append(am2)
+                            for tc in am2.get("tool_calls", []):
+                                args = json.loads(tc["function"]["arguments"])
+                                logger.info(f"Tyrone forced tool: {tc['function']['name']} {args}")
+                                result = await execute_tool(tc["function"]["name"], args)
+                                messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result})
                     return assistant_message.get("content", "")
 
                 # Execute tool calls
@@ -205,12 +251,17 @@ async def voice_chat(
                     tool_name = tool_call["function"]["name"]
                     tool_args = json.loads(tool_call["function"]["arguments"])
                     logger.info(f"Tyrone tool [{round_num+1}]: {tool_name} {tool_args}")
+                    if tool_name == "create_shopping_list":
+                        shopping_list_called = True
                     tool_result = await execute_tool(tool_name, tool_args)
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call["id"],
                         "content": tool_result,
                     })
+
+                # After first forced round, switch back to auto
+                tool_choice = "auto"
 
         return "Done."
 
