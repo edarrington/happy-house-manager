@@ -4,6 +4,13 @@
  * Add any custom overrides or component styles here.
  */
 
+/* Default accent palette (Emerald) */
+:root {
+  --accent-400: #4ade80;
+  --accent-500: #22c55e;
+  --accent-600: #16a34a;
+}
+
 /* Smooth HTMX transitions */
 .htmx-swapping {
   opacity: 0;

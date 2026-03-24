@@ -4,11 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Happy House Manager{% endblock %}</title>
-  <!-- Apply dark mode before render to prevent flash -->
+  <!-- Apply dark mode and accent palette before render to prevent flash -->
   <script>
-    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
-    }
+    (function() {
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      }
+      var palettes = {
+        emerald: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a' },
+        violet:  { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' },
+        rose:    { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' },
+        amber:   { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+        sky:     { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
+        slate:   { 400: '#94a3b8', 500: '#64748b', 600: '#475569' },
+      };
+      var p = palettes[localStorage.palette] || palettes.emerald;
+      var r = document.documentElement.style;
+      r.setProperty('--accent-400', p[400]);
+      r.setProperty('--accent-500', p[500]);
+      r.setProperty('--accent-600', p[600]);
+    })();
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -18,15 +33,17 @@
       theme: {
         extend: {
           colors: {
-            green: {
-              500: '#22c55e',
-              600: '#16a34a',
+            accent: {
+              400: 'var(--accent-400)',
+              500: 'var(--accent-500)',
+              600: 'var(--accent-600)',
             }
           }
         }
       }
     }
   </script>
+  <link rel="stylesheet" href="/static/app.css" />
   <style>
     .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
     .htmx-request .htmx-indicator { opacity: 1; }
@@ -46,7 +63,7 @@
   <aside id="sidebar" class="fixed md:relative z-30 w-64 flex-shrink-0 bg-slate-900 flex flex-col h-full -translate-x-full md:translate-x-0">
     <!-- Logo -->
     <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
-      <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+      <div class="w-8 h-8 bg-accent-500 rounded-lg flex items-center justify-center">
         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         </svg>
@@ -76,7 +93,7 @@
         {% set is_active = active_page == page_key %}
         <a href="{{ href }}" onclick="closeSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                  {% if is_active %}bg-green-500 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %}">
+                  {% if is_active %}bg-accent-500 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %}">
           <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}" />
           </svg>
@@ -92,7 +109,7 @@
         {% if user.picture %}
           <img src="{{ user.picture }}" alt="{{ user.name }}" class="w-8 h-8 rounded-full object-cover" />
         {% else %}
-          <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold">
+          <div class="w-8 h-8 rounded-full bg-accent-500 flex items-center justify-center text-white text-xs font-bold">
             {{ (user.given_name or user.name or user.email)[0].upper() }}
           </div>
         {% endif %}
@@ -134,7 +151,7 @@
       </div>
       <div class="flex items-center gap-3">
         <div id="global-loading" class="htmx-indicator flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-          <svg class="animate-spin w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24">
+          <svg class="animate-spin w-4 h-4 text-accent-500" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
@@ -187,6 +204,29 @@
   function toggleDark() {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.theme = isDark ? 'dark' : 'light';
+  }
+  function setPalette(name) {
+    var palettes = {
+      emerald: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a' },
+      violet:  { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' },
+      rose:    { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' },
+      amber:   { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+      sky:     { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
+      slate:   { 400: '#94a3b8', 500: '#64748b', 600: '#475569' },
+    };
+    var p = palettes[name] || palettes.emerald;
+    var r = document.documentElement.style;
+    r.setProperty('--accent-400', p[400]);
+    r.setProperty('--accent-500', p[500]);
+    r.setProperty('--accent-600', p[600]);
+    localStorage.palette = name;
+    document.querySelectorAll('[data-palette]').forEach(function(el) {
+      var active = el.dataset.palette === name;
+      el.classList.toggle('ring-2', active);
+      el.classList.toggle('ring-offset-2', active);
+      el.classList.toggle('ring-white', active);
+      el.classList.toggle('scale-110', active);
+    });
   }
 </script>
 
