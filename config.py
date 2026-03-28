@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = ""
 
+    # Anthropic
+    anthropic_api_key: str = ""
+
     # Gmail desktop OAuth (thedarringtons20@gmail.com inbox reading)
     gmail_desktop_client_id: str = ""
     gmail_desktop_client_secret: str = ""
