@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 @router.get("/", include_in_schema=False)
 async def calendar_index(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
     """Calendar events full page."""
+    events = []
+    needs_reauth = False
     try:
         service = await build_calendar_service(current_user["sub"], cosmos_store)
         now = datetime.now(timezone.utc).isoformat()
@@ -34,11 +36,12 @@ async def calendar_index(request: Request, current_user: Dict[str, Any] = Depend
         events = result.get("items", [])
     except Exception as e:
         logger.error(f"Calendar index error: {e}")
-        events = []
+        if "invalid_grant" in str(e):
+            needs_reauth = True
 
     return templates.TemplateResponse(
         "calendar/index.html",
-        {"request": request, "user": current_user, "active_page": "calendar", "events": events},
+        {"request": request, "user": current_user, "active_page": "calendar", "events": events, "needs_reauth": needs_reauth},
     )
 
 
